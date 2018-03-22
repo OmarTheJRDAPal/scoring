@@ -17,13 +17,41 @@ INSERT INTO game_types (game_type, weight) VALUES ("Consolation Bracket", 1.075)
 INSERT INTO game_types (game_type, weight) VALUES ("Semi-Final Bracket", 1.125);
 INSERT INTO game_types (game_type, weight) VALUES ("Final Bracket", 1.175);
 
-INSERT INTO games (game_date, w_team_id, w_team_score, w_team_expulsions, l_team_id, l_team_score, l_team_expulsions, game_type_id) VALUES (
+INSERT INTO games (game_date, w_team_id, w_team_score, w_team_expulsions, w_ranking_points, l_team_id, l_team_score, l_team_expulsions, l_ranking_points, game_type_id) VALUES (
 	"2018-02-15",
 	1,
 	100,
 	0,
+	150.10,
 	2,
 	50,
 	0,
+	50.10,
+	1 -- Normal game
+);
+
+INSERT INTO games (game_date, w_team_id, w_team_score, w_team_expulsions, w_ranking_points, l_team_id, l_team_score, l_team_expulsions, l_ranking_points, game_type_id) VALUES (
+	"2018-02-16",
+	1,
+	100,
+	0,
+	150.10,
+	2,
+	50,
+	0,
+	50.10,
+	1 -- Normal game
+);
+
+INSERT INTO games (game_date, w_team_id, w_team_score, w_team_expulsions, w_ranking_points, l_team_id, l_team_score, l_team_expulsions, l_ranking_points, game_type_id) VALUES (
+	"2018-02-17",
+	1,
+	100,
+	0,
+	150.10,
+	2,
+	50,
+	0,
+	50.10,
 	1 -- Normal game
 );

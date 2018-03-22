@@ -1,4 +1,5 @@
 from cs50 import SQL
+from collections import defaultdict
 from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 import datetime
@@ -173,45 +174,59 @@ def compute_month_strength_ratings(games, teams, since_date):
 @app.route("/ratings", methods=["GET"])
 def ratings():
 
-        if not request.form.get("division_id"):
-            return apology("must provide division", 403)
-
-	division_id = request.form.get("division_id")
-
-        if not request.form.get("start_date"):
+	print request
+        if not request.args.get("start_date"):
             return apology("must provide start date", 403)
 
-	start_date = request.form.get("start_date")
+	start_date = request.args.get("start_date")
 
-        if not request.form.get("end_date"):
+        if not request.args.get("end_date"):
             return apology("must provide end date", 403)
 
-	end_date = request.form.get("end_date")
+	end_date = request.args.get("end_date")
+
+	print start_date
+	print end_date
 
         # Query database for username
-        ranking_point_averages = db.execute("""
-		SELECT team_id, division_id, AVERAGE(ranking_points) avg_ranking_points, COUNT(ranking_points) n_games FROM
-		(
-			SELECT w_ranking_points ranking_points, w_team_id team_id, game_date FROM games 
-			UNION ALL
-			SELECT l_ranking_points, l_team_id, game_date FROM games
-		) flat_games
-		WHERE game_date >= :start_date AND game_date <= :end_date AND team_id IN (SELECT id FROM teams WHERE division_id = :division_id)
-		GROUP BY team_id
-	"""), division_id=division_id, start_date=start_date, end_date=end_date)
+        team_ranking_point_averages = db.execute("""
+                SELECT team_id, division_id, SUM(ranking_points) * 1.0 / COUNT(ranking_points) avg_ranking_points, COUNT(ranking_points) n_games FROM
+                (
+                        SELECT w_ranking_points ranking_points, w_team_id team_id, game_date FROM games
+                        UNION ALL
+                        SELECT l_ranking_points, l_team_id, game_date FROM games
+                ) flat_games
+                JOIN teams ON teams.id = team_id
+		WHERE game_date >= :start AND game_date <= :end
+                GROUP BY team_id
+	""", start_date=start, end_date=end)
+#            WHERE game_date >= :start AND game_date <= :end
 
-	rps_in_division = defaultdict(lambda :)
-	for rp_average in ranking_point_averages:
+	rps_in_division = defaultdict(lambda: [])
+	print team_ranking_point_averages
+	for rp_average in team_ranking_point_averages:
 		n_games = rp_average["n_games"]
 		avg_ranking_points = rp_average["avg_ranking_points"]
 		division_id = rp_average["division_id"]
 		team_id = rp_average["team_id"]
+		print n_games
 
 		if n_games > 2:
-			rps_in_division[division_id] = (avg_ranking_points, n_games)
-			
+			rps_in_division[division_id].append(avg_ranking_points)
 
-	return render_template("ratings.html", ranking_point_averages=ranking_point_averages)
+	medians = defaultdict(lambda: None)
+
+	print rps_in_division, "RPS IN DIVISION"
+
+	for division_id, ranking_point_averages in rps_in_division.iteritems():			
+		print median(ranking_point_averages), ranking_point_averages
+		medians[division_id] = median(ranking_point_averages)
+
+	for rp_average in team_ranking_point_averages:
+		rp_average["median"] = medians[rp_average["division_id"]] 
+		rp_average["strength_rating"] = rp_average["avg_ranking_points"] * 1.0 / rp_average["median"]
+
+	return render_template("ratings.html", team_ranking_point_averages=team_ranking_point_averages)
 
 
 @app.route("/register", methods=["GET", "POST"])
