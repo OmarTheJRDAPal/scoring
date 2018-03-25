@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Enter a Game
+{% endblock %}
+
+
+{% block head %}
+  {{ super() }}
+    <script src="/static/js/enter.js"></script>
+{% endblock %}
+
+{% block main %}
+  <script type="text/template" id="division_dropdown">
+  	<select>
+  		
+  	</select>
+  </script>
+  <h1>Enter a Game</h1>
+  <form>
+    <label for="league_select">League</label>
+  	<select id="league_select">
+	  {% for league in leagues %}
+    	<option value="{{ league['id'] }}">{{ league["name"] }}</div>
+	  {% endfor %}
+	  </select>
+  </form>
+{% endblock %}

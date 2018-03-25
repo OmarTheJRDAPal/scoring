@@ -1,11 +1,13 @@
 from cs50 import SQL
 from collections import defaultdict
-from flask import Flask, flash, redirect, render_template, request, session
+from flask import Flask, flash, redirect, render_template, request, session, jsonify
 from flask_session import Session
 import datetime
 from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions
 from werkzeug.security import check_password_hash, generate_password_hash
+
+BAD_REQUEST = 400
 
 from numpy import median
 
@@ -28,6 +30,7 @@ if app.config["DEBUG"]:
 # Configure session to use filesystem (instead of signed cookies)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
+app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
 Session(app)
 
 # Configure CS50 Library to use SQLite database
@@ -134,7 +137,6 @@ def expulsion_points(game, team_id):
 		return 10 * game["l_team_expulsions"]
 	else:
 		raise Exception("Invalid team id")
-
 def lookup_teams(game, teams, reference_team_id):
 	w_team = teams[teams["w_team_id"]]
 	l_team = teams[teams["l_team_id"]]
@@ -146,7 +148,7 @@ def lookup_teams(game, teams, reference_team_id):
 	else:
                 raise Exception("Invalid team id")
 
-def ranking_points(game, teams, team_id):
+def ranking_points(weight, w_team, l_team):
 	wlp = win_loss_points(game, team_id)
 	psp = point_spread_points(game, team_id)
 
@@ -154,39 +156,122 @@ def ranking_points(game, teams, team_id):
 
 	return ((wlp + psp) / 2.0) * game["weight"] * opponent["strength_rating"] - expulsion_points(game, team_id)
 
+@app.route("/divisions_for_league", methods=["GET"])
+def divisions_for_league():
 
-def compute_month_strength_ratings(games, teams, since_date):
-	division_teams = dict([])
-	for team in teams:
-		division_teams[team["id"]] = team
+    if not request.form.get("league_id"):
+        return apology("must provide league_id", BAD_REQUEST)
 
-                team_ranking_points_past_year = defaultdict(lambda: 0)
+    league_id = int(request.form.get("league_id"))
+
+    # Query database for game weight
+    divisions_result = db.execute("""
+        SELECT divisions.id as division_id, teams.id AS team_id, name FROM divisions
+        JOIN (SELECT * FROM teams WHERE league_id = :league_id) teams ON divisions.id = teams.division_id
+    """, league_id=league_id)
+
+    return jsonify(divisions_result)
 
 
-                for past_game in games[:i]:
-                        parsed_past_game_date = datetime.datetime.strptime(past_game["game_date"], "%Y-%m-%d")
-                        if parsed_game_date - datetime.timedelta(years=1) <= parsed_past_game_date and parsed_past_game_date <= parsed_game_date:
+@app.route("/enter", methods=["GET"])
+def enter():
+    # Query database for game weight
+    leagues_result = db.execute("""
+        SELECT * FROM leagues
+    """)
+    return render_template("enter.html", leagues=leagues_result)
 
-                                team_ranking_points_past_year
-                pass
 
+@app.route("/calc_rps", methods=["GET"])
+def rps():
+    if not request.form.get("game_type_id"):
+        return apology("must provide game_type_id", BAD_REQUEST)
+
+    game_type_id = request.form.get("game_type_id")
+
+    # Query database for game weight
+    weight_result = db.execute("""
+                SELECT weight FROM game_types WHERE id = :game_type_id       
+    """, game_type_id=game_type_id)
+
+    if len(weight_result) != 1:
+        return apology("invalid game_type_id", BAD_REQUEST)
+
+    game_weight = weight_result[0]["weight"]
+
+    if not request.form.get("w_team_id"):
+        return apology("must provide w_team_id", BAD_REQUEST)
+
+    w_team_id = request.form.get("w_team_id")
+
+    if not request.form.get("l_team_id"):
+        return apology("must provide l_team_id", BAD_REQUEST)
+
+    l_team_id = request.form.get("l_team_id")
+
+    sr_results = db.execute("""
+                SELECT id, strength_rating FROM teams WHERE id = :w_team_id OR id = :l_team_id
+    """, w_team_id=w_team_id, l_team_id=l_team_id)
+
+    if len(sr_results) != 2:
+        return apology("1 or more unknown/invalid team ids", BAD_REQUEST)
+
+    strength_ratings = dict({})
+    for sr_result in sr_results:
+        strength_ratings[sr_result["id"]] = sr_result["strength_rating"]
+
+    w_team_strength_rating = strength_ratings[w_team_id]
+    l_team_strength_rating = strength_ratings[l_team_id]
+
+    if not request.form.get("w_team_points"):
+        return apology("must provide w_team_points", BAD_REQUEST)
+
+    w_team_points = request.form.get("w_team_points")
+
+    if not request.form.get("l_team_points"):
+        return apology("must provide l_team_points", BAD_REQUEST)
+
+    l_team_points = request.form.get("l_team_points")
+
+    if not request.form.get("w_team_expulsions"):
+        return apology("must provide w_team_expulsions", BAD_REQUEST)
+
+    w_team_expulsions = request.form.get("w_team_expulsions")
+
+    if not request.form.get("l_team_expulsions"):
+        return apology("must provide l_team_expulsions", BAD_REQUEST)
+
+    l_team_expulsions = request.form.get("l_team_expulsions")
+
+    w_team_info = {
+        "expulsions": w_team_expulsions,
+        "strength_rating": w_team_strength_rating,
+        "id": w_team_id,
+        "points": w_team_points
+    }
+
+    l_team_info = {
+        "expulsions": l_team_expulsions,
+        "strength_rating": l_team_strength_rating,
+        "id": l_team_id,
+        "points": l_team_points
+    }
 
 @app.route("/ratings", methods=["GET"])
 def ratings():
 
-	print request
-        if not request.args.get("start_date"):
-            return apology("must provide start date", 403)
+    if not request.args.get("start_date"):
+        return apology("must provide start date", 400)
 
-	start_date = request.args.get("start_date")
+	start_date_raw = request.args.get("start_date")
 
         if not request.args.get("end_date"):
-            return apology("must provide end date", 403)
+            return apology("must provide end date", 400)
 
-	end_date = request.args.get("end_date")
+	end_date_raw = request.args.get("end_date")
 
-	print start_date
-	print end_date
+	start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
+	end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
 
         # Query database for username
         team_ranking_point_averages = db.execute("""
@@ -197,10 +282,9 @@ def ratings():
                         SELECT l_ranking_points, l_team_id, game_date FROM games
                 ) flat_games
                 JOIN teams ON teams.id = team_id
-		WHERE game_date >= :start AND game_date <= :end
+		WHERE game_date >= :start_date AND game_date <= :end_date
                 GROUP BY team_id
-	""", start_date=start, end_date=end)
-#            WHERE game_date >= :start AND game_date <= :end
+	""", start_date=start_date, end_date=end_date)
 
 	rps_in_division = defaultdict(lambda: [])
 	print team_ranking_point_averages
