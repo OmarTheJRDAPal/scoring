@@ -156,30 +156,30 @@ def ranking_points(weight, w_team, l_team):
 
 	return ((wlp + psp) / 2.0) * game["weight"] * opponent["strength_rating"] - expulsion_points(game, team_id)
 
-@app.route("/divisions_for_league", methods=["GET"])
-def divisions_for_league():
+@app.route("/leagues_for_division", methods=["GET"])
+def leagues_for_division():
 
-    if not request.form.get("league_id"):
-        return apology("must provide league_id", BAD_REQUEST)
+    if not request.args.get("division_id"):
+        return apology("must provide division_id", BAD_REQUEST)
 
-    league_id = int(request.form.get("league_id"))
+    division_id = int(request.args.get("division_id"))
 
     # Query database for game weight
-    divisions_result = db.execute("""
-        SELECT divisions.id as division_id, teams.id AS team_id, name FROM divisions
-        JOIN (SELECT * FROM teams WHERE league_id = :league_id) teams ON divisions.id = teams.division_id
-    """, league_id=league_id)
+    leagues_result = db.execute("""
+        SELECT leagues.id as league_id, teams.id AS team_id, name FROM leagues
+        JOIN (SELECT * FROM teams WHERE division_id = :division_id) teams ON leagues.id = teams.league_id
+    """, division_id=division_id)
 
-    return jsonify(divisions_result)
+    return jsonify(leagues_result)
 
 
 @app.route("/enter", methods=["GET"])
 def enter():
     # Query database for game weight
-    leagues_result = db.execute("""
-        SELECT * FROM leagues
+    divisions_result = db.execute("""
+        SELECT * FROM divisions
     """)
-    return render_template("enter.html", leagues=leagues_result)
+    return render_template("enter.html", divisions=divisions_result)
 
 
 @app.route("/calc_rps", methods=["GET"])

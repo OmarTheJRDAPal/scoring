@@ -11,18 +11,27 @@
 {% endblock %}
 
 {% block main %}
-  <script type="text/template" id="division_dropdown">
-  	<select>
-  		
-  	</select>
+  <script type="text/template" id="leagues_select_menu_template">
+  		<% for (var i in leagues) { %>
+			<option value="<%= leagues[i]["team_id"]%>"><%= leagues[i]["name"] %></option>
+  		<% } %>
   </script>
   <h1>Enter a Game</h1>
   <form>
-    <label for="league_select">League</label>
-  	<select id="league_select">
-	  {% for league in leagues %}
-    	<option value="{{ league['id'] }}">{{ league["name"] }}</div>
+    <label for="division_select">Division</label>
+  	<select id="division_select">
+	  {% for division in divisions %}
+    	<option value="{{ division["id"] }}">{{ division["name"] }}</div>
 	  {% endfor %}
 	  </select>
+    <br/>
+    <label for="team_1_select_container">Team 1</label>
+	<select id="team_1_select" name="team1_id"></select>
+    <br/>
+    <label for="team_1_select_container">Team 2</label>
+	<select id="team_2_select" name="team2_id"></select>
+    <br/>
+    <label for="team_1_expulsions_input">Team 1 Expulsions</label>
+	<input id="team_1_expulsions_input" type="text" name="team1_expulusions"><select id="team_2_select"></select>
   </form>
 {% endblock %}

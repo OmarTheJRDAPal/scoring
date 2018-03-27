@@ -1,13 +1,23 @@
 $(function () {
-	$("#league_select").change(function () {
+
+	var leagueSelectTmplHtml = $("#leagues_select_menu_template").html();
+	var leagueSelectTmpl = _.template(leagueSelectTmplHtml);
+	$("#division_select").change(function () {
 		var select = $(this);
 		$.get({
-			url: "/divisions_for_league",
+			url: "/leagues_for_division",
 			data: {
-				league_id: select.val(),
+				division_id: select.val(),
 			},
 			success: function (data) {
-				console.log(data);
+				var team1Select = leagueSelectTmpl({
+					leagues: data,
+				});
+				var team2Select = leagueSelectTmpl({
+					leagues: data,
+				});
+				$("#team_1_select").html(team1Select);
+				$("#team_2_select").html(team2Select);
 			}
 		})
 	})
