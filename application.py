@@ -120,8 +120,8 @@ def point_spread_points(game, team_id):
 
 	return team_scored * 300.0 / total_points_scored
 
-def win_loss_points(game, team_id):
-	if game["w_team_score"] == game["l_team_score"]:
+def win_loss_points(team, opponent):
+	if team["points"] == opponent["points"]:
 		return WIN_LOSS_POINTS_TIE
 	elif game["w_team_id"] == team_id:
 		return WIN_LOSS_POINTS_WIN
@@ -148,7 +148,7 @@ def lookup_teams(game, teams, reference_team_id):
 	else:
                 raise Exception("Invalid team id")
 
-def ranking_points(weight, w_team, l_team):
+def ranking_points(weight, team, opponent):
 	wlp = win_loss_points(game, team_id)
 	psp = point_spread_points(game, team_id)
 
@@ -175,19 +175,23 @@ def leagues_for_division():
 
 @app.route("/enter", methods=["GET"])
 def enter():
-    # Query database for game weight
     divisions_result = db.execute("""
         SELECT * FROM divisions
     """)
-    return render_template("enter.html", divisions=divisions_result)
+    game_types_result = db.execute("""
+        SELECT * FROM game_types
+    """)
+    return render_template("enter.html", divisions=divisions_result, game_types=game_types_result)
 
 
-@app.route("/calc_rps", methods=["GET"])
+@app.route("/calc_rps", methods=["POST"])
 def rps():
+
+    print request.form
     if not request.form.get("game_type_id"):
         return apology("must provide game_type_id", BAD_REQUEST)
 
-    game_type_id = request.form.get("game_type_id")
+    game_type_id = int(request.form.get("game_type_id"))
 
     # Query database for game weight
     weight_result = db.execute("""
@@ -199,19 +203,19 @@ def rps():
 
     game_weight = weight_result[0]["weight"]
 
-    if not request.form.get("w_team_id"):
-        return apology("must provide w_team_id", BAD_REQUEST)
+    if not request.form.get("team1_id"):
+        return apology("must provide team1_id", BAD_REQUEST)
 
-    w_team_id = request.form.get("w_team_id")
+    team1_id = int(request.form.get("team1_id"))
 
-    if not request.form.get("l_team_id"):
-        return apology("must provide l_team_id", BAD_REQUEST)
+    if not request.form.get("team2_id"):
+        return apology("must provide team2_id", BAD_REQUEST)
 
-    l_team_id = request.form.get("l_team_id")
+    team2_id = int(request.form.get("team2_id"))
 
     sr_results = db.execute("""
-                SELECT id, strength_rating FROM teams WHERE id = :w_team_id OR id = :l_team_id
-    """, w_team_id=w_team_id, l_team_id=l_team_id)
+                SELECT id, strength_rating FROM teams WHERE id = :team1_id OR id = :team2_id
+    """, team1_id=team1_id, team2_id=team2_id)
 
     if len(sr_results) != 2:
         return apology("1 or more unknown/invalid team ids", BAD_REQUEST)
@@ -220,42 +224,46 @@ def rps():
     for sr_result in sr_results:
         strength_ratings[sr_result["id"]] = sr_result["strength_rating"]
 
-    w_team_strength_rating = strength_ratings[w_team_id]
-    l_team_strength_rating = strength_ratings[l_team_id]
+    team1_strength_rating = strength_ratings[team1_id]
+    team2_strength_rating = strength_ratings[team2_id]
 
-    if not request.form.get("w_team_points"):
-        return apology("must provide w_team_points", BAD_REQUEST)
+    if not request.form.get("team1_points"):
+        return apology("must provide team1_points", BAD_REQUEST)
 
-    w_team_points = request.form.get("w_team_points")
+    team1_points = request.form.get("team1_points")
 
-    if not request.form.get("l_team_points"):
-        return apology("must provide l_team_points", BAD_REQUEST)
+    if not request.form.get("team2_points"):
+        return apology("must provide team2_points", BAD_REQUEST)
 
-    l_team_points = request.form.get("l_team_points")
+    team2_points = request.form.get("team2_points")
 
-    if not request.form.get("w_team_expulsions"):
-        return apology("must provide w_team_expulsions", BAD_REQUEST)
+    print request.form.get("team1_expulsions")
 
-    w_team_expulsions = request.form.get("w_team_expulsions")
+    if not request.form.get("team1_expulsions"):
+        return apology("must provide team1_expulsions", BAD_REQUEST)
 
-    if not request.form.get("l_team_expulsions"):
-        return apology("must provide l_team_expulsions", BAD_REQUEST)
+    team1_expulsions = request.form.get("team1_expulsions")
 
-    l_team_expulsions = request.form.get("l_team_expulsions")
+    if not request.form.get("team2_expulsions"):
+        return apology("must provide team2_expulsions", BAD_REQUEST)
 
-    w_team_info = {
-        "expulsions": w_team_expulsions,
-        "strength_rating": w_team_strength_rating,
-        "id": w_team_id,
-        "points": w_team_points
+    team2_expulsions = request.form.get("team2_expulsions")
+
+    team1_info = {
+        "expulsions": team1_expulsions,
+        "strength_rating": team1_strength_rating,
+        "id": team1_id,
+        "points": team1_points
     }
 
-    l_team_info = {
-        "expulsions": l_team_expulsions,
-        "strength_rating": l_team_strength_rating,
-        "id": l_team_id,
-        "points": l_team_points
+    team2_info = {
+        "expulsions": team2_expulsions,
+        "strength_rating": team2_strength_rating,
+        "id": team2_id,
+        "points": team2_points
     }
+
+    print team1_info, team2_info
 
 @app.route("/ratings", methods=["GET"])
 def ratings():

@@ -17,7 +17,14 @@
   		<% } %>
   </script>
   <h1>Enter a Game</h1>
-  <form>
+  <form action="/calc_rps" method="post">
+    <label for="game_type_select">Game Type</label>
+  	<select id="game_type_select" name="game_type_id">
+	  {% for game_type in game_types %}
+    	<option value="{{ game_type["id"] }}">{{ game_type["game_type"] }}</div>
+	  {% endfor %}
+	  </select>
+    <br/>
     <label for="division_select">Division</label>
   	<select id="division_select">
 	  {% for division in divisions %}
@@ -28,10 +35,21 @@
     <label for="team_1_select_container">Team 1</label>
 	<select id="team_1_select" name="team1_id"></select>
     <br/>
-    <label for="team_1_select_container">Team 2</label>
-	<select id="team_2_select" name="team2_id"></select>
+    <label for="team_1_points_input">Team 1 Points</label>
+	<input id="team_1_points_input" type="text" name="team1_points">
     <br/>
     <label for="team_1_expulsions_input">Team 1 Expulsions</label>
-	<input id="team_1_expulsions_input" type="text" name="team1_expulusions"><select id="team_2_select"></select>
+	<input id="team_1_expulsions_input" type="text" name="team1_expulsions">
+    <br/>
+    <label for="team_2_select_container">Team 2</label>
+	<select id="team_2_select" name="team2_id"></select>
+    <br/>
+    <label for="team_2_points_input">Team 2 Points</label>
+	<input id="team_2_points_input" type="text" name="team2_points">
+    <br/>
+    <label for="team_2_expulsions_input">Team 2 Expulsions</label>
+	<input id="team_2_expulsions_input" type="text" name="team2_expulsions">
+    <br/>
+    <input type="submit"/>
   </form>
 {% endblock %}
