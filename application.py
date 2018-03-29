@@ -109,34 +109,21 @@ WIN_LOSS_POINTS_WIN = 200
 WIN_LOSS_POINTS_LOSS = 100
 WIN_LOSS_POINTS_TIE = 150
 
-def point_spread_points(game, team_id):
-	total_points_scored = game["w_team_score"] + game["l_team_score"]
-	if game["w_team_id"] == team_id:
-		team_scored = game["w_team_score"]
-	elif game["l_team_id"] == team_id:
-		team_scored = game["l_team_score"]
-	else:
-		raise Exception("Invalid team id")
-
-	return team_scored * 300.0 / total_points_scored
+def point_spread_points(team, opponent):
+	total_points_scored = team["points"] + opponent["points"]
+	return team["points"] * 300.0 / total_points_scored
 
 def win_loss_points(team, opponent):
 	if team["points"] == opponent["points"]:
 		return WIN_LOSS_POINTS_TIE
-	elif game["w_team_id"] == team_id:
+	elif team["points"] > opponent["points"]:
 		return WIN_LOSS_POINTS_WIN
-	elif game["l_team_id"] == team_id:
+	elif team["points"] < opponent["points"]:
 		return WIN_LOSS_POINTS_LOSS
-	else:
-		raise Exception("Invalid team id")
 
-def expulsion_points(game, team_id):
-	if game["w_team_id"] == team_id:
-		return 10 * game["w_team_expulsions"]
-	elif game["l_team_id"] == team_id:
-		return 10 * game["l_team_expulsions"]
-	else:
-		raise Exception("Invalid team id")
+def expulsion_points(team):
+	return team["expulsions"] * 10
+
 def lookup_teams(game, teams, reference_team_id):
 	w_team = teams[teams["w_team_id"]]
 	l_team = teams[teams["l_team_id"]]
@@ -149,12 +136,9 @@ def lookup_teams(game, teams, reference_team_id):
                 raise Exception("Invalid team id")
 
 def ranking_points(weight, team, opponent):
-	wlp = win_loss_points(game, team_id)
-	psp = point_spread_points(game, team_id)
-
-	team, opponent = lookup_teams(game, teams, team_id)
-
-	return ((wlp + psp) / 2.0) * game["weight"] * opponent["strength_rating"] - expulsion_points(game, team_id)
+	wlp = win_loss_points(team, opponent)
+	psp = point_spread_points(team, opponent)
+	return ((wlp + psp) / 2.0) * weight * opponent["strength_rating"] - expulsion_points(team)
 
 @app.route("/leagues_for_division", methods=["GET"])
 def leagues_for_division():
@@ -230,24 +214,24 @@ def rps():
     if not request.form.get("team1_points"):
         return apology("must provide team1_points", BAD_REQUEST)
 
-    team1_points = request.form.get("team1_points")
+    team1_points = int(request.form.get("team1_points"))
 
     if not request.form.get("team2_points"):
         return apology("must provide team2_points", BAD_REQUEST)
 
-    team2_points = request.form.get("team2_points")
+    team2_points = int(request.form.get("team2_points"))
 
     print request.form.get("team1_expulsions")
 
     if not request.form.get("team1_expulsions"):
         return apology("must provide team1_expulsions", BAD_REQUEST)
 
-    team1_expulsions = request.form.get("team1_expulsions")
+    team1_expulsions = int(request.form.get("team1_expulsions"))
 
     if not request.form.get("team2_expulsions"):
         return apology("must provide team2_expulsions", BAD_REQUEST)
 
-    team2_expulsions = request.form.get("team2_expulsions")
+    team2_expulsions = int(request.form.get("team2_expulsions"))
 
     team1_info = {
         "expulsions": team1_expulsions,
@@ -263,7 +247,8 @@ def rps():
         "points": team2_points
     }
 
-    print team1_info, team2_info
+    print ranking_points(game_weight, team1_info, team2_info)
+    print ranking_points(game_weight, team2_info, team1_info)
 
 @app.route("/ratings", methods=["GET"])
 def ratings():

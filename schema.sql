@@ -31,12 +31,12 @@ CREATE TABLE games (
 	id INTEGER PRIMARY KEY,
 	game_date DATE,
 	game_type_id INTEGER,
-	w_team_id INTEGER,
-	w_team_score INTEGER,
-	w_team_expulsions INTEGER,
-	w_ranking_points DECIMAL,
-	l_team_id INTEGER,
-	l_team_score INTEGER,
-	l_team_expulsions INTEGER,
-	l_ranking_points DECIMAL
+	team1_id INTEGER,
+	team1_points INTEGER,
+	team1_expulsions INTEGER,
+	team1_ranking_points DECIMAL,
+        team2_id INTEGER,
+        team2_points INTEGER,
+        team2_expulsions INTEGER,
+        team2_ranking_points DECIMAL
 );
