@@ -78,7 +78,7 @@ def login():
 
         # Query database for username
         rows = db.execute("SELECT * FROM users WHERE username = :username",
-                          username=request.form.get("username"))
+                          username=str(request.form.get("username")))
 
         # Ensure username exists and password is correct
         if len(rows) != 1 or not check_password_hash(rows[0]["hash"], request.form.get("password")):
@@ -93,6 +93,51 @@ def login():
     # User reached route via GET (as by clicking a link or via redirect)
     else:
         return render_template("login.html")
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """Log user in"""
+
+    # Forget any user_id
+    session.clear()
+
+    # User reached route via POST (as by submitting a form via POST)
+    if request.method == "POST":
+
+	username = str(request.form.get("username"))
+	password = str(request.form.get("password"))
+
+        # Ensure username was submitted
+        if not username:
+            return apology("must provide username", 403)
+
+        # Ensure password was submitted
+        elif not password:
+            return apology("must provide password", 403)
+
+	print username, password
+
+        # Query database for username
+        rows = db.execute("SELECT * FROM users WHERE username = :username",
+                          username=username)
+
+	print "here"
+
+        # Ensure username exists and password is correct
+        if len(rows) > 0:
+            return apology("username already exists", 403)
+        else:
+            hash_value = str(generate_password_hash(password))
+            result = db.execute("INSERT INTO users (username, hash) VALUES (:username, :hash)", username=username, hash=hash_value)
+            print result
+            # Remember which user has logged in
+            session["user_id"] = result
+            # Redirect user to home page
+            return redirect("/")
+
+    # User reached route via GET (as by clicking a link or via redirect)
+    else:
+        return render_template("register.html")
 
 
 @app.route("/logout")
@@ -141,6 +186,7 @@ def ranking_points(weight, team, opponent):
 	return ((wlp + psp) / 2.0) * weight * opponent["strength_rating"] - expulsion_points(team)
 
 @app.route("/leagues_for_division", methods=["GET"])
+@login_required
 def leagues_for_division():
 
     if not request.args.get("division_id"):
@@ -156,101 +202,129 @@ def leagues_for_division():
 
     return jsonify(leagues_result)
 
+@app.route("/games", methods=["GET"])
+@login_required
+def games:
+    games_result = db.execute("""
+        SELECT game_date, game_type, divisions.name as division, leagues.name as team1_league,
+        leagues2.name as team2_league
+         FROM games
+        JOIN game_types ON game_type_id = game_types.id
+        JOIN teams team_1_data ON team_1_data.id = team1_id
+        JOIN leagues ON leagues.id = team_1_data.league_id
+        JOIN teams team_2_data ON team_2_data.id = team2_id
+        JOIN leagues leagues2 ON leagues2.id = team_2_data.league_id
+        JOIN divisions ON divisions.id = team_1_data.division_id
+    """)
+    return render_template("games.html", games=games_result)
 
-@app.route("/enter", methods=["GET"])
+
+@app.route("/enter", methods=["GET", "POST"])
+@login_required
 def enter():
-    divisions_result = db.execute("""
-        SELECT * FROM divisions
-    """)
-    game_types_result = db.execute("""
-        SELECT * FROM game_types
-    """)
-    return render_template("enter.html", divisions=divisions_result, game_types=game_types_result)
+    if request.method == "GET":
+      divisions_result = db.execute("""
+          SELECT * FROM divisions
+      """)
+      game_types_result = db.execute("""
+          SELECT * FROM game_types
+      """)
+      return render_template("enter.html", divisions=divisions_result, game_types=game_types_result)
+    else:
+        if not request.form.get("game_type_id"):
+            return apology("must provide game_type_id", BAD_REQUEST)
 
+        game_type_id = int(request.form.get("game_type_id"))
 
-@app.route("/calc_rps", methods=["POST"])
-def rps():
+        game_date = str(request.form.get("game_date"))
 
-    print request.form
-    if not request.form.get("game_type_id"):
-        return apology("must provide game_type_id", BAD_REQUEST)
+        # Query database for game weight
+        weight_result = db.execute("""
+                    SELECT weight FROM game_types WHERE id = :game_type_id       
+        """, game_type_id=game_type_id)
 
-    game_type_id = int(request.form.get("game_type_id"))
+        if len(weight_result) != 1:
+            return apology("invalid game_type_id", BAD_REQUEST)
 
-    # Query database for game weight
-    weight_result = db.execute("""
-                SELECT weight FROM game_types WHERE id = :game_type_id       
-    """, game_type_id=game_type_id)
+        game_weight = weight_result[0]["weight"]
 
-    if len(weight_result) != 1:
-        return apology("invalid game_type_id", BAD_REQUEST)
+        if not request.form.get("team1_id"):
+            return apology("must provide team1_id", BAD_REQUEST)
 
-    game_weight = weight_result[0]["weight"]
+        team1_id = int(request.form.get("team1_id"))
 
-    if not request.form.get("team1_id"):
-        return apology("must provide team1_id", BAD_REQUEST)
+        if not request.form.get("team2_id"):
+            return apology("must provide team2_id", BAD_REQUEST)
 
-    team1_id = int(request.form.get("team1_id"))
+        team2_id = int(request.form.get("team2_id"))
 
-    if not request.form.get("team2_id"):
-        return apology("must provide team2_id", BAD_REQUEST)
+        sr_results = db.execute("""
+                    SELECT id, strength_rating FROM teams WHERE id = :team1_id OR id = :team2_id
+        """, team1_id=team1_id, team2_id=team2_id)
 
-    team2_id = int(request.form.get("team2_id"))
+        if len(sr_results) != 2:
+            return apology("1 or more unknown/invalid team ids", BAD_REQUEST)
 
-    sr_results = db.execute("""
-                SELECT id, strength_rating FROM teams WHERE id = :team1_id OR id = :team2_id
-    """, team1_id=team1_id, team2_id=team2_id)
+        strength_ratings = dict({})
+        for sr_result in sr_results:
+            strength_ratings[sr_result["id"]] = sr_result["strength_rating"]
 
-    if len(sr_results) != 2:
-        return apology("1 or more unknown/invalid team ids", BAD_REQUEST)
+        team1_strength_rating = strength_ratings[team1_id]
+        team2_strength_rating = strength_ratings[team2_id]
 
-    strength_ratings = dict({})
-    for sr_result in sr_results:
-        strength_ratings[sr_result["id"]] = sr_result["strength_rating"]
+        if not request.form.get("team1_points"):
+            return apology("must provide team1_points", BAD_REQUEST)
 
-    team1_strength_rating = strength_ratings[team1_id]
-    team2_strength_rating = strength_ratings[team2_id]
+        team1_points = int(request.form.get("team1_points"))
 
-    if not request.form.get("team1_points"):
-        return apology("must provide team1_points", BAD_REQUEST)
+        if not request.form.get("team2_points"):
+            return apology("must provide team2_points", BAD_REQUEST)
 
-    team1_points = int(request.form.get("team1_points"))
+        team2_points = int(request.form.get("team2_points"))
 
-    if not request.form.get("team2_points"):
-        return apology("must provide team2_points", BAD_REQUEST)
+        print request.form.get("team1_expulsions")
 
-    team2_points = int(request.form.get("team2_points"))
+        if not request.form.get("team1_expulsions"):
+            return apology("must provide team1_expulsions", BAD_REQUEST)
 
-    print request.form.get("team1_expulsions")
+        team1_expulsions = int(request.form.get("team1_expulsions"))
 
-    if not request.form.get("team1_expulsions"):
-        return apology("must provide team1_expulsions", BAD_REQUEST)
+        if not request.form.get("team2_expulsions"):
+            return apology("must provide team2_expulsions", BAD_REQUEST)
 
-    team1_expulsions = int(request.form.get("team1_expulsions"))
+        team2_expulsions = int(request.form.get("team2_expulsions"))
 
-    if not request.form.get("team2_expulsions"):
-        return apology("must provide team2_expulsions", BAD_REQUEST)
+        team1_info = {
+            "expulsions": team1_expulsions,
+            "strength_rating": team1_strength_rating,
+            "id": team1_id,
+            "points": team1_points
+        }
 
-    team2_expulsions = int(request.form.get("team2_expulsions"))
+        team2_info = {
+            "expulsions": team2_expulsions,
+            "strength_rating": team2_strength_rating,
+            "id": team2_id,
+            "points": team2_points
+        }
 
-    team1_info = {
-        "expulsions": team1_expulsions,
-        "strength_rating": team1_strength_rating,
-        "id": team1_id,
-        "points": team1_points
-    }
+        team1_ranking_points = ranking_points(game_weight, team1_info, team2_info)
+        team2_ranking_points = ranking_points(game_weight, team2_info, team1_info)
 
-    team2_info = {
-        "expulsions": team2_expulsions,
-        "strength_rating": team2_strength_rating,
-        "id": team2_id,
-        "points": team2_points
-    }
+        result = db.execute("""INSERT INTO games (game_date, game_type_id, team1_id, team1_points, 
+            team1_expulsions, team1_ranking_points, team2_id, team2_points, 
+            team2_expulsions, team2_ranking_points) VALUES (:game_date, :game_type_id, 
+            :team1_id, :team1_points, :team1_expulsions, :team1_ranking_points,
+            :team2_id, :team2_points, :team2_expulsions, :team2_ranking_points)""", 
+        game_date=game_date, game_type_id=game_type_id,
+        team1_id=team1_id, team1_points=team1_points, team1_expulsions=team1_expulsions, team1_ranking_points=team1_ranking_points,
+        team2_id=team2_id, team2_points=team2_points, team2_expulsions=team2_expulsions, team2_ranking_points=team2_ranking_points
+        )
 
-    print ranking_points(game_weight, team1_info, team2_info)
-    print ranking_points(game_weight, team2_info, team1_info)
+        return redirect("/games/")
 
 @app.route("/ratings", methods=["GET"])
+@login_required
 def ratings():
 
     if not request.args.get("start_date"):
@@ -305,18 +379,6 @@ def ratings():
 
 	return render_template("ratings.html", team_ranking_point_averages=team_ranking_point_averages)
 
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    """Register user"""
-    return apology("TODO")
-
-
-@app.route("/sell", methods=["GET", "POST"])
-@login_required
-def sell():
-    """Sell shares of stock"""
-    return apology("TODO")
 
 
 def errorhandler(e):

@@ -3,6 +3,20 @@ DROP TABLE IF EXISTS game_types;
 DROP TABLE IF EXISTS divisions;
 DROP TABLE IF EXISTS teams;
 DROP TABLE IF EXISTS games;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS groups;
+DROP TABLE IF EXISTS group_memberships;
+DROP TABLE IF EXISTS game_ranking_points;
+
+CREATE TABLE groups (
+        id INTEGER PRIMARY KEY,
+	name TEXT
+);
+
+CREATE TABLE group_memberships (
+	team_id INTEGER,
+	group_id INTEGER
+);
 
 CREATE TABLE leagues (
 	id INTEGER PRIMARY KEY,
@@ -23,8 +37,22 @@ CREATE TABLE divisions (
 CREATE TABLE teams (
 	id INTEGER PRIMARY KEY,
 	league_id INTEGER,
-	division_id INTEGER,
-	strength_rating DECIMAL
+	division_id INTEGER
+);
+
+CREATE TABLE team_group_strength_ratings (
+	id INTEGER PRIMARY KEY,
+	team_id INTEGER,
+	group_id DECIMAL,
+        strength_rating DECIMAL
+);
+
+CREATE TABLE game_ranking_points (
+	id INTEGER PRIMARY KEY,
+        game_id INTEGER,
+	group_id INTEGER,
+	team1_ranking_points DECIMAL,
+	team2_ranking_points DECIMAL
 );
 
 CREATE TABLE games (
@@ -34,9 +62,17 @@ CREATE TABLE games (
 	team1_id INTEGER,
 	team1_points INTEGER,
 	team1_expulsions INTEGER,
-	team1_ranking_points DECIMAL,
-        team2_id INTEGER,
-        team2_points INTEGER,
-        team2_expulsions INTEGER,
-        team2_ranking_points DECIMAL
+    team2_id INTEGER,
+    team2_points INTEGER,
+    team2_expulsions INTEGER
 );
+
+
+
+CREATE TABLE users (
+	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	username TEXT NOT NULL,
+	hash TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX 'username' ON "users" ("username");

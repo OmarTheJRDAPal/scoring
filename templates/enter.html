@@ -17,7 +17,9 @@
   		<% } %>
   </script>
   <h1>Enter a Game</h1>
-  <form action="/calc_rps" method="post">
+  <form action="/enter" method="post">
+    <label for="game_date_input">Game Date</label>
+      <input type="date" name="game_date" id="game_date_input"/>
     <label for="game_type_select">Game Type</label>
   	<select id="game_type_select" name="game_type_id">
 	  {% for game_type in game_types %}
