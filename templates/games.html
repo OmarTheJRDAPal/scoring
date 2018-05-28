@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Games
+{% endblock %}
+
+{% block main %}
+<table>
+  <tr>
+    <th>Date</th>
+    <th>Type</th>
+    <th>League</th>
+    <th>Division</th>
+    <th>Team 1 Points</th>
+    <th>Team 2 Points</th>
+  </tr>
+
+  {% for game in games %}
+    <tr>
+      <td>{{game["game_date"]}}</td>
+      <td>{{game["game_type"]}}</td>
+      <td>{{game["league"]}}</td>
+      <td>{{game["team1_division"]}}</td>
+      <td>{{game["team1_points"]}}</td>
+      <td>{{game["team2_points"]}}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}
