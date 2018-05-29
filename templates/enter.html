@@ -35,7 +35,12 @@
 	  </select>
     <br/>
     <label for="team_1_select_container">Team 1</label>
-	<select id="team_1_select" name="team1_id"></select>
+	<select id="team_1_select" name="team1_id">
+  	  {% for league in leagues %}
+      		<option value="{{ league["id"] }}">{{ league["name"] }}</div>
+	  {% endfor %}
+
+        </select>
     <br/>
     <label for="team_1_points_input">Team 1 Points</label>
 	<input id="team_1_points_input" type="text" name="team1_points">
@@ -44,7 +49,11 @@
 	<input id="team_1_expulsions_input" type="text" name="team1_expulsions">
     <br/>
     <label for="team_2_select_container">Team 2</label>
-	<select id="team_2_select" name="team2_id"></select>
+	<select id="team_2_select" name="team2_id">
+  	  {% for league in leagues %}
+      		<option value="{{ league["id"] }}">{{ league["name"] }}</div>
+	  {% endfor %}
+        </select>
     <br/>
     <label for="team_2_points_input">Team 2 Points</label>
 	<input id="team_2_points_input" type="text" name="team2_points">

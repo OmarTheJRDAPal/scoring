@@ -180,12 +180,16 @@ def lookup_teams(game, teams, reference_team_id):
 	else:
                 raise Exception("Invalid team id")
 
-def ranking_points(weight, team, opponent, groups_srs):
-        for group_id in strength_ratings:
-		group		
+def ranking_points_for_groups(weight, team, opponent, groups_srs):
+	group_ranking_points = dict({})
+
+        for group_id in groups_srs:
+		strengths = groups_srs[group_id]
 		wlp = win_loss_points(team, opponent)
 		psp = point_spread_points(team, opponent)
-		return ((wlp + psp) / 2.0) * weight * opponent["strength_rating"] - expulsion_points(team)
+		group_ranking_points[group_id] = ((wlp + psp) / 2.0) * weight * strengths[opponent["id"]] - expulsion_points(team)
+
+	return group_ranking_points
 
 @app.route("/leagues_for_division", methods=["GET"])
 @login_required
@@ -231,7 +235,11 @@ def enter():
       game_types_result = db.execute("""
           SELECT * FROM game_types
       """)
-      return render_template("enter.html", divisions=divisions_result, game_types=game_types_result)
+      leagues_result = db.execute("""
+          SELECT id, name FROM leagues
+      """)
+
+      return render_template("enter.html", divisions=divisions_result, game_types=game_types_result, leagues=leagues_result)
     else:
         if not request.form.get("game_type_id"):
             return apology("must provide game_type_id", BAD_REQUEST)
@@ -261,7 +269,7 @@ def enter():
         team2_id = int(request.form.get("team2_id"))
 
         sr_results = db.execute("""
-		SELECT group_id, IFNULL(t1.strength_rating, 1.0), IFNULL(t2.strength_rating, 1.0) FROM (
+		SELECT common_groups.group_id as group_id, IFNULL(t1.strength_rating, 1.0) team1, IFNULL(t2.strength_rating, 1.0) team2 FROM (
 			SELECT t1.group_id FROM group_memberships t1
 			JOIN (
 				SELECT * FROM group_memberships WHERE team_id = :team2_id
@@ -273,7 +281,13 @@ def enter():
 
         strength_ratings = defaultdict(lambda: dict({}))
         for sr_result in sr_results:
-            strength_ratings[sr_result["group_id"]] = dict({"team1_id": sr_result["team1_id"], "team2_id": sr_result["team2_id"]})
+            print sr_result
+            strength_ratings[sr_result["group_id"]] = dict({
+			team1_id: sr_result["team1"],
+			team2_id: sr_result["team2"]
+	    })
+
+	print strength_ratings
 
         if not request.form.get("team1_points"):
             return apology("must provide team1_points", BAD_REQUEST)
@@ -307,20 +321,32 @@ def enter():
             "points": team2_points
         }
 
-        team1_ranking_points = ranking_points(game_weight, team1_info, team2_info, strength_ratings)
-        team2_ranking_points = ranking_points(game_weight, team2_info, team1_info, strength_ratings)
+        team1_ranking_points = ranking_points_for_groups(game_weight, team1_info, team2_info, strength_ratings)
+        team2_ranking_points = ranking_points_for_groups(game_weight, team2_info, team1_info, strength_ratings)
 
-        result = db.execute("""INSERT INTO games (game_date, game_type_id, team1_id, team1_points, 
-            team1_expulsions, team1_ranking_points, team2_id, team2_points, 
-            team2_expulsions, team2_ranking_points) VALUES (:game_date, :game_type_id, 
-            :team1_id, :team1_points, :team1_expulsions, :team1_ranking_points,
-            :team2_id, :team2_points, :team2_expulsions, :team2_ranking_points)""", 
+        game_id = db.execute("""INSERT INTO games (game_date, game_type_id, team1_id, team1_points,
+            team1_expulsions, team2_id, team2_points,
+            team2_expulsions) VALUES (:game_date, :game_type_id,
+            :team1_id, :team1_points, :team1_expulsions,
+            :team2_id, :team2_points, :team2_expulsions)""",
         game_date=game_date, game_type_id=game_type_id,
-        team1_id=team1_id, team1_points=team1_points, team1_expulsions=team1_expulsions, team1_ranking_points=team1_ranking_points,
-        team2_id=team2_id, team2_points=team2_points, team2_expulsions=team2_expulsions, team2_ranking_points=team2_ranking_points
+        team1_id=team1_id, team1_points=team1_points, team1_expulsions=team1_expulsions,
+        team2_id=team2_id, team2_points=team2_points, team2_expulsions=team2_expulsions
         )
 
+	for group_id in team1_ranking_points:
+		team1_group_rp = team1_ranking_points[group_id]
+		team2_group_rp = team2_ranking_points[group_id]
+
+		result = db.execute("""INSERT INTO game_ranking_points (game_id, group_id, team1_ranking_points, team2_ranking_points)
+			VALUES (:game_id, :group_id, :team1_group_rp, :team2_group_rp)
+		""", game_id=game_id, group_id=group_id, team1_group_rp=team1_group_rp, team2_group_rp=team2_group_rp)
+
         return redirect("/games/")
+
+@app.route("/recalculate", methods=["POST", "GET"])
+@login_required
+def recalculate():
 
 @app.route("/ratings", methods=["GET"])
 @login_required
