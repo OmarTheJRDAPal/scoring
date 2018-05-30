@@ -344,9 +344,32 @@ def enter():
 
         return redirect("/games/")
 
-@app.route("/recalculate", methods=["POST", "GET"])
-@login_required
-def recalculate():
+def calculate_group_ranking_point_averages(start_date, end_date):
+		
+	result = db.execute("""
+			SELECT *, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as ranking_point_average FROM
+			(
+				SELECT teams.id as team_id,  group_id, games.id,
+				CASE WHEN games.team1_id = teams.id
+				THEN game_ranking_points.team1_ranking_points
+				ELSE game_ranking_points.team2_ranking_points END team_game_group_ranking_points,
+				divisions.name division_name, divisions.id division_id, leagues.name league_name
+				FROM teams 
+				JOIN (SELECT * FROM games WHERE game_date >= :start_date AND game_date <= :end_date) games 
+					ON games.team1_id = teams.id OR games.team2_id = teams.id
+				JOIN game_ranking_points ON game_ranking_points.game_id = games.id
+				JOIN divisions ON divisions.id = teams.division_id
+				JOIN leagues ON leagues.id = teams.league_id
+			)
+			GROUP BY team_id, group_id
+	""", start_date=start_date, end_date=end_date)
+
+	return
+
+
+#@app.route("/recalculate", methods=["POST", "GET"])
+#@login_required
+#def recalculate():
 
 @app.route("/ratings", methods=["GET"])
 @login_required
