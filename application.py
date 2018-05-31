@@ -347,7 +347,7 @@ def enter():
 def calculate_group_ranking_point_averages(start_date, end_date):
 		
 	result = db.execute("""
-			SELECT *, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as ranking_point_average FROM
+			SELECT team_id, group_id, division_name, league_name, division_id, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as team_group_rp_average FROM
 			(
 				SELECT teams.id as team_id,  group_id, games.id,
 				CASE WHEN games.team1_id = teams.id
@@ -363,6 +363,9 @@ def calculate_group_ranking_point_averages(start_date, end_date):
 			)
 			GROUP BY team_id, group_id
 	""", start_date=start_date, end_date=end_date)
+
+	for (team_id, group_id, division_name, league_name, division_id, team_group_rp_average) in result:
+
 
 	return
 
