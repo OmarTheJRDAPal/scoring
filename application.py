@@ -364,8 +364,19 @@ def calculate_group_ranking_point_averages(start_date, end_date):
 			GROUP BY team_id, group_id
 	""", start_date=start_date, end_date=end_date)
 
-	for (team_id, group_id, division_name, league_name, division_id, team_group_rp_average) in result:
+	division_group_rankings = defaultdict(lambda: [])
 
+	division_names = dict({})
+
+	for (team_id, group_id, division_name, league_name, division_id, team_group_rp_average) in result:
+		division_names[division_id] = division_name
+		division_group_rankings[group_id, division_id].append({
+			"league": league_name,
+			"rp_average" team_group_rp_average
+		})
+
+	for (group_id, division_id) in division_group_rankings:
+		
 
 	return
 
