@@ -347,9 +347,9 @@ def enter():
 def calculate_group_ranking_point_averages(start_date, end_date):
 		
 	result = db.execute("""
-			SELECT team_id, group_id, division_name, league_name, division_id, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as team_group_rp_average FROM
+			SELECT team_id, group_name, group_id, division_name, league_name, division_id, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as team_group_rp_average FROM
 			(
-				SELECT teams.id as team_id,  group_id, games.id,
+				SELECT teams.id as team_id, groups.name as group_name, group_id, games.id,
 				CASE WHEN games.team1_id = teams.id
 				THEN game_ranking_points.team1_ranking_points
 				ELSE game_ranking_points.team2_ranking_points END team_game_group_ranking_points,
@@ -360,30 +360,45 @@ def calculate_group_ranking_point_averages(start_date, end_date):
 				JOIN game_ranking_points ON game_ranking_points.game_id = games.id
 				JOIN divisions ON divisions.id = teams.division_id
 				JOIN leagues ON leagues.id = teams.league_id
+				JOIN groups ON groups.id = group_id
 			)
 			GROUP BY team_id, group_id
+			ORDER BY team_group_rp_average DESC
 	""", start_date=start_date, end_date=end_date)
-
 	division_group_rankings = defaultdict(lambda: [])
 
 	division_names = dict({})
+	group_names = dict({})
 
-	for (team_id, group_id, division_name, league_name, division_id, team_group_rp_average) in result:
-		division_names[division_id] = division_name
-		division_group_rankings[group_id, division_id].append({
-			"league": league_name,
-			"rp_average" team_group_rp_average
+	for row in result:
+		group_names[row["group_id"]] = row["group_name"]
+		division_names[row["division_id"]] = row["division_name"]
+		division_group_rankings[row["group_id"], row["division_id"]].append({
+			"league": row["league_name"],
+			"rp_average": row["team_group_rp_average"]
 		})
 
-	for (group_id, division_id) in division_group_rankings:
-		
-
-	return
+	return group_names, division_names, division_group_rankings
 
 
-#@app.route("/recalculate", methods=["POST", "GET"])
-#@login_required
-#def recalculate():
+@app.route("/rankings", methods=["POST", "GET"])
+@login_required
+def rankings():
+    if not request.args.get("start_date"):
+        return apology("must provide start date", 400)
+
+    start_date_raw = request.args.get("start_date")
+
+    if not request.args.get("end_date"):
+        return apology("must provide end date", 400)
+
+    end_date_raw = request.args.get("end_date")
+    start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
+    end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
+
+    group_names, division_names, division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date)
+    return render_template("rankings.html", group_names=group_names, division_names=division_names, division_group_rankings=division_group_rankings)
+
 
 @app.route("/ratings", methods=["GET"])
 @login_required
