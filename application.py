@@ -346,10 +346,16 @@ def enter():
 
 def calculate_group_ranking_point_averages(start_date, end_date, group_id=None):
 
+	kwargs = dict({
+		"start_date": start_date,
+		"end_date": end_date,
+	})
+
 	if group_id is None:
 		group_id_filter_str = "1"
 	else:
 		group_id_filter_str = "group_id = :group_id"
+		kwargs["group_id"] = group_id
 
 	result = db.execute("""
 			SELECT team_id, group_name, group_id, division_name, league_name, division_id, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as team_group_rp_average FROM
@@ -370,7 +376,7 @@ def calculate_group_ranking_point_averages(start_date, end_date, group_id=None):
 			)
 			GROUP BY team_id, group_id
 			ORDER BY team_group_rp_average DESC
-	""", start_date=start_date, end_date=end_date, group_id=group_id)
+	""", **kwargs)
 	division_group_rankings = defaultdict(lambda: [])
 
 	division_names = dict({})
@@ -386,28 +392,50 @@ def calculate_group_ranking_point_averages(start_date, end_date, group_id=None):
 
 	return group_names, division_names, division_group_rankings
 
+@app.route("/recalculate", methods=["POST", "GET"])
+@login_required
+def recalculate():
 
-@app.route("/rankings", methods=["POST", "GET"])
+    # User reached route via POST (as by submitting a form via POST)
+    if request.method == "POST":
+
+        start_date_raw = request.form.get("start_date")
+        end_date_raw = request.form.get("end_date")
+        strength_rating_memo = request.form.get("strength_rating_memo")
+        print start_date_raw, end_date_raw, strength_rating_memo
+        return render_template("recalculate_result.html")
+    else:
+        return render_template("recalculate.html")
+
+
+
+@app.route("/rankings", methods=["GET"])
 @login_required
 def rankings():
-    if not request.args.get("start_date"):
-        return apology("must provide start date", 400)
+
+
+    groups_result = db.execute("SELECT id, name FROM groups")
+    group_names = {}
+    for row in groups_result:
+        group_names[row["id"]] = row["name"]
 
     start_date_raw = request.args.get("start_date")
-
-    if not request.args.get("end_date"):
-        return apology("must provide end date", 400)
-
-    group_id = None
-    if request.args.get("group_id"):
-        group_id = int(request.args.get("group_id"))
-
     end_date_raw = request.args.get("end_date")
+    group_id_raw = request.args.get("group_id")
+
+    if not start_date_raw or not end_date_raw or not group_id_raw:
+        return render_template("rankings.html", group_names=group_names, start_date=start_date_raw, end_date=end_date_raw, group_id=group_id_raw)
+
+    if not request.args.get("group_id"):
+        return apology("must provide group id", 400)
+
+    group_id = int(group_id_raw)
+
     start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
     end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
 
     group_names, division_names, division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date, group_id=group_id)
-    return render_template("rankings.html", group_names=group_names, division_names=division_names, division_group_rankings=division_group_rankings)
+    return render_template("rankings.html", group_names=group_names, division_names=division_names, division_group_rankings=division_group_rankings, start_date=start_date_raw, end_date=end_date_raw, group_id=group_id_raw)
 
 
 @app.route("/ratings", methods=["GET"])

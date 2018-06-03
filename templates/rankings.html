@@ -5,6 +5,24 @@
 {% endblock %}
 
 {% block main %}
+    <form action="/rankings" method="get">
+        <div class="form-group">
+		    <label for="start_date_input">Start Date</label>
+	        <input type="date" name="start_date" id="start_date_input" value="{{start_date}}"/>
+
+		    <label for="end_date_input">End Date</label>
+	        <input type="date" name="end_date" id="end_date_input" value="{{end_date}}"/>	        
+
+
+		    <label for="group_select">Group</label>
+		  	<select id="group_select" name="group_id" value="{{group_id}}">
+	  		{% for id in group_names %}
+		    	<option value="{{ id}}">{{ group_names[id] }}</option>
+	  		{% endfor %}
+	    	</select>
+        </div>
+        <button class="btn btn-primary" type="submit">Calculate</button>
+    </form>
     {{group_names}}
     {{division_names}}
     {{division_group_rankings}}
