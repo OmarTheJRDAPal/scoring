@@ -344,7 +344,7 @@ def enter():
 
         return redirect("/games/")
 
-def calculate_group_ranking_point_averages(start_date, end_date):
+def calculate_group_ranking_point_averages(start_date, end_date, group_id=None):
 		
 	result = db.execute("""
 			SELECT team_id, group_name, group_id, division_name, league_name, division_id, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as team_group_rp_average FROM
@@ -392,11 +392,15 @@ def rankings():
     if not request.args.get("end_date"):
         return apology("must provide end date", 400)
 
+    group_id = None
+    if request.args.get("group_id"):
+        group_id = request.args.get("group_id")
+
     end_date_raw = request.args.get("end_date")
     start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
     end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
 
-    group_names, division_names, division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date)
+    group_names, division_names, division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date, group_id=group_id)
     return render_template("rankings.html", group_names=group_names, division_names=division_names, division_group_rankings=division_group_rankings)
 
 
