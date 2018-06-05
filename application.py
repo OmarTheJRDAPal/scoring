@@ -358,13 +358,14 @@ def calculate_group_ranking_point_averages(start_date, end_date, group_id=None):
 		kwargs["group_id"] = group_id
 
 	result = db.execute("""
-			SELECT team_id, group_name, group_id, division_name, league_name, division_id, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as team_group_rp_average FROM
+			SELECT league_id, team_id, group_name, group_id, division_name,
+			league_name, division_id, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as team_group_rp_average FROM
 			(
 				SELECT teams.id as team_id, groups.name as group_name, group_id, games.id,
 				CASE WHEN games.team1_id = teams.id
 				THEN game_ranking_points.team1_ranking_points
 				ELSE game_ranking_points.team2_ranking_points END team_game_group_ranking_points,
-				divisions.name division_name, divisions.id division_id, leagues.name league_name
+				divisions.name division_name, divisions.id division_id, leagues.name league_name, leagues.id
 				FROM teams 
 				JOIN (SELECT * FROM games WHERE game_date >= :start_date AND game_date <= :end_date) games 
 					ON games.team1_id = teams.id OR games.team2_id = teams.id
@@ -386,7 +387,8 @@ def calculate_group_ranking_point_averages(start_date, end_date, group_id=None):
 		group_names[row["group_id"]] = row["group_name"]
 		division_names[row["division_id"]] = row["division_name"]
 		division_group_rankings[row["group_id"], row["division_id"]].append({
-			"league": row["league_name"],
+			"league_id": row["league_id"],
+			"league": row["league"],
 			"rp_average": row["team_group_rp_average"]
 		})
 
@@ -401,8 +403,41 @@ def recalculate():
 
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
-        strength_rating_memo = request.form.get("strength_rating_memo")
-        print start_date_raw, end_date_raw, strength_rating_memo
+        sr_name = request.form.get("strength_rating_memo")
+        print start_date_raw, end_date_raw, sr_name
+
+
+        start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
+        end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
+
+        batch_id = db.execute("""INSERT INTO strength_rating_batches (name) VALUES (:sr_name)""",
+		  sr_name=sr_name)
+
+	db.execute("""
+		INSERT INTO team_group_strength_ratings 
+
+		SELECT :batch_id, team_id, group_id, 
+                        SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as strength_rating FROM
+                        (
+                                SELECT teams.id as team_id, groups.name as group_name, group_id, games.id,
+                                CASE WHEN games.team1_id = teams.id
+                                THEN game_ranking_points.team1_ranking_points
+                                ELSE game_ranking_points.team2_ranking_points END team_game_group_ranking_points,
+                                divisions.name division_name, divisions.id division_id, leagues.name league_name, leagues.id
+                                FROM teams
+                                JOIN (SELECT * FROM games WHERE game_date >= :start_date AND game_date <= :end_date) games
+                                        ON games.team1_id = teams.id OR games.team2_id = teams.id
+                                JOIN game_ranking_points ON game_ranking_points.game_id = games.id
+                                JOIN divisions ON divisions.id = teams.division_id
+                                JOIN leagues ON leagues.id = teams.league_id
+                                JOIN groups ON groups.id = group_id
+                        )
+                        GROUP BY team_id, group_id
+                        ORDER BY team_group_rp_average DESC
+
+	""", batch_id=batch_id)
+
+
         return render_template("recalculate_result.html")
     else:
         return render_template("recalculate.html")

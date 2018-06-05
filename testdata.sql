@@ -12,13 +12,18 @@ INSERT INTO leagues (name) VALUES ("Bearville");
 INSERT INTO teams (league_id, division_id) VALUES (1, 1);
 INSERT INTO teams (league_id, division_id) VALUES (2, 1);
 
-INSERT INTO team_group_strength_ratings (team_id, group_id, strength_rating) VALUES (
-  1, 1, .8
+INSERT INTO strength_rating_batches (name) VALUES (
+	"Default batch"
 );
 
-INSERT INTO team_group_strength_ratings (team_id, group_id, strength_rating) VALUES (
-  2, 1, 1.2
+INSERT INTO team_group_strength_ratings (team_id, group_id, strength_rating, batch_id) VALUES (
+  1, 1, .8, 1
 );
+
+INSERT INTO team_group_strength_ratings (team_id, group_id, strength_rating, batch_id) VALUES (
+  2, 1, 1.2, 1
+);
+
 
 INSERT INTO game_types (game_type, weight) VALUES ("Normal", 1.0);
 INSERT INTO game_types (game_type, weight) VALUES ("Consolation Bracket", 1.075);

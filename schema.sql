@@ -40,8 +40,14 @@ CREATE TABLE teams (
 	division_id INTEGER
 );
 
+CREATE TABLE strength_rating_batches (
+	id INTEGER PRIMARY KEY,
+	name VARCHAR
+);
+
 CREATE TABLE team_group_strength_ratings (
 	id INTEGER PRIMARY KEY,
+	batch_id INTEGER,
 	team_id INTEGER,
 	group_id DECIMAL,
         strength_rating DECIMAL
