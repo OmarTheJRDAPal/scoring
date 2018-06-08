@@ -73,6 +73,9 @@ CREATE TABLE games (
     team2_expulsions INTEGER
 );
 
+CREATE TABLE application_settings (
+	strength_rating_batch_id INTEGER
+);
 
 
 CREATE TABLE users (

@@ -24,6 +24,10 @@ INSERT INTO team_group_strength_ratings (team_id, group_id, strength_rating, bat
   2, 1, 1.2, 1
 );
 
+INSERT INTO application_settings (strength_rating_batch_id) VALUES (
+	1
+);
+
 
 INSERT INTO game_types (game_type, weight) VALUES ("Normal", 1.0);
 INSERT INTO game_types (game_type, weight) VALUES ("Consolation Bracket", 1.075);

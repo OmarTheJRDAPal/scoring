@@ -275,8 +275,9 @@ def enter():
 				SELECT * FROM group_memberships WHERE team_id = :team2_id
 			) t2 ON t2.group_id = t1.group_id WHERE t1.team_id = :team1_id
 		) common_groups
-		LEFT JOIN team_group_strength_ratings t1 ON t1.group_id = common_groups.group_id AND t1.team_id = :team1_id
-		LEFT JOIN team_group_strength_ratings t2 ON t2.group_id = common_groups.group_id AND t2.team_id = :team2_id
+		JOIN (SELECT strength_rating_batch_id batch_id FROM application_settings LIMIT 1) settings ON 1
+		LEFT JOIN team_group_strength_ratings t1 ON t1.group_id = common_groups.group_id AND t1.team_id = :team1_id AND settings.batch_id = t1.batch_id
+		LEFT JOIN team_group_strength_ratings t2 ON t2.group_id = common_groups.group_id AND t2.team_id = :team2_id AND settings.batch_id = t2.batch_id
         """, team1_id=team1_id, team2_id=team2_id)
 
         strength_ratings = defaultdict(lambda: dict({}))
@@ -403,9 +404,8 @@ def recalculate():
 
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
-        sr_name = request.form.get("strength_rating_memo")
+        sr_name = str(request.form.get("strength_rating_memo"))
         print start_date_raw, end_date_raw, sr_name
-
 
         start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
         end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
@@ -414,7 +414,7 @@ def recalculate():
 		  sr_name=sr_name)
 
 	db.execute("""
-		INSERT INTO team_group_strength_ratings 
+		INSERT INTO team_group_strength_ratings (batch_id, team_id, group_id, strength_rating) 
 
 		SELECT :batch_id, team_id, group_id, 
                         SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as strength_rating FROM
@@ -433,9 +433,9 @@ def recalculate():
                                 JOIN groups ON groups.id = group_id
                         )
                         GROUP BY team_id, group_id
-                        ORDER BY team_group_rp_average DESC
+                        ORDER BY strength_rating DESC
 
-	""", batch_id=batch_id)
+	""", batch_id=batch_id, start_date=start_date, end_date=end_date)
 
 
         return render_template("recalculate_result.html")
