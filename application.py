@@ -6,7 +6,7 @@ import datetime
 from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions
 from werkzeug.security import check_password_hash, generate_password_hash
-
+import sqlite3
 BAD_REQUEST = 400
 
 from numpy import median
@@ -33,8 +33,23 @@ app.config["SESSION_TYPE"] = "filesystem"
 app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
 Session(app)
 
+
+class NumpyMedianAggregate(object):
+  def __init__(self):
+    self.values = []
+  def step(self, value):
+    self.values.append(value)
+  def finalize(self):
+    return median(self.values)
+
+
+def sqlite_memory_engine_creator():
+    con = sqlite3.connect('finance.db')
+    con.create_aggregate("median", 1, NumpyMedianAggregate)
+    return con
+
 # Configure CS50 Library to use SQLite database
-db = SQL("sqlite:///finance.db")
+db = SQL("sqlite:///finance.db", creator=sqlite_memory_engine_creator)
 
 
 @app.route("/")
@@ -223,6 +238,16 @@ def games():
         JOIN divisions ON divisions.id = team_1_data.division_id
     """)
     return render_template("games.html", games=games_result)
+
+@app.route("/median", methods=["GET"])
+@login_required
+def median_egbert():
+   divisions_result = db.execute("""
+          SELECT median(id) FROM divisions
+      """)
+   for row in divisions_result:
+	print row
+
 
 
 @app.route("/enter", methods=["GET", "POST"])
