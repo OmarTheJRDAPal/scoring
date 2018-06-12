@@ -439,26 +439,38 @@ def recalculate():
 		  sr_name=sr_name)
 
 	db.execute("""
+
+		WITH ranking_point_averages AS (
+		        SELECT team_id, group_id,
+                	        SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as ranking_point_average FROM
+                        	(
+                                	SELECT teams.id as team_id, groups.name as group_name, group_id, games.id,
+	                                CASE WHEN games.team1_id = teams.id
+        	                        THEN game_ranking_points.team1_ranking_points
+                	                ELSE game_ranking_points.team2_ranking_points END team_game_group_ranking_points,
+                        	        divisions.name division_name, divisions.id division_id, leagues.name league_name, leagues.id
+                                	FROM teams
+                                	JOIN (SELECT * FROM games WHERE game_date >= :start_date AND game_date <= :end_date) games
+                                        	ON games.team1_id = teams.id OR games.team2_id = teams.id
+	                                JOIN game_ranking_points ON game_ranking_points.game_id = games.id
+        	                        JOIN divisions ON divisions.id = teams.division_id
+                	                JOIN leagues ON leagues.id = teams.league_id
+                        	        JOIN groups ON groups.id = group_id
+	                        )
+        	                GROUP BY team_id, group_id
+
+
+		), median_ranking_point_averages AS (
+			SELECT division_id, group_id, MEDIAN(rpa.ranking_point_average) median_rpa FROM ranking_point_averages rpa
+			JOIN teams ON teams.id = rpa.team_id
+			GROUP BY division_id, group_id
+		)
+
 		INSERT INTO team_group_strength_ratings (batch_id, team_id, group_id, strength_rating) 
 
-		SELECT :batch_id, team_id, group_id, 
-                        SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as strength_rating FROM
-                        (
-                                SELECT teams.id as team_id, groups.name as group_name, group_id, games.id,
-                                CASE WHEN games.team1_id = teams.id
-                                THEN game_ranking_points.team1_ranking_points
-                                ELSE game_ranking_points.team2_ranking_points END team_game_group_ranking_points,
-                                divisions.name division_name, divisions.id division_id, leagues.name league_name, leagues.id
-                                FROM teams
-                                JOIN (SELECT * FROM games WHERE game_date >= :start_date AND game_date <= :end_date) games
-                                        ON games.team1_id = teams.id OR games.team2_id = teams.id
-                                JOIN game_ranking_points ON game_ranking_points.game_id = games.id
-                                JOIN divisions ON divisions.id = teams.division_id
-                                JOIN leagues ON leagues.id = teams.league_id
-                                JOIN groups ON groups.id = group_id
-                        )
-                        GROUP BY team_id, group_id
-                        ORDER BY strength_rating DESC
+		SELECT :batch_id, team_id, group_id, ranking_point_average * 1.0/ median_rpa strength_rating FROM ranking_point_averages rpa
+		JOIN teams ON teams.id = rpa.team_id
+		JOIN median_ranking_point_averages mrpa ON mrpa.division_id = teams.division_id
 
 	""", batch_id=batch_id, start_date=start_date, end_date=end_date)
 
