@@ -23,7 +23,18 @@
         </div>
         <button class="btn btn-primary" type="submit">Calculate</button>
     </form>
-    {{group_names}}
-    {{division_names}}
-    {{division_group_rankings}}
+    {% for division_name in division_group_rankings %}
+	<div style="display: inline-block">
+	<h2>{{ division_name }}</h2>
+	<table class="table table-striped">
+	{% for league in division_group_rankings[division_name] %}
+		<tr>
+			<td>{{ loop.index }}</td>
+			<td>{{ league["league"] }}</td>
+			<td>{{ league["rp_average"]}}</td>
+		</tr>			
+	{% endfor %}
+	</table>
+	</div>
+    {% endfor %}
 {% endblock %}

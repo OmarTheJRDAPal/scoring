@@ -5,12 +5,13 @@
 {% endblock %}
 
 {% block main %}
-<table>
+<table class="table">
   <tr>
     <th>Date</th>
     <th>Type</th>
-    <th>League</th>
     <th>Division</th>
+    <th>League</th>
+    <th>League</th>
     <th>Team 1 Points</th>
     <th>Team 2 Points</th>
   </tr>
@@ -19,11 +20,14 @@
     <tr>
       <td>{{game["game_date"]}}</td>
       <td>{{game["game_type"]}}</td>
-      <td>{{game["league"]}}</td>
-      <td>{{game["team1_division"]}}</td>
+      <td>{{game["division"]}}</td>
+      <td>{{game["team1_league"]}}</td>
+      <td>{{game["team2_league"]}}</td>
       <td>{{game["team1_points"]}}</td>
       <td>{{game["team2_points"]}}</td>
+      <td><a href="/game?id={{game["game_id"]}}"><button>More</button></a></td>
     </tr>
+    </a>
   {% endfor %}
 </table>
 {% endblock %}

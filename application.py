@@ -8,6 +8,7 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.security import check_password_hash, generate_password_hash
 import sqlite3
 BAD_REQUEST = 400
+NOT_FOUND = 404
 
 from numpy import median
 
@@ -223,12 +224,32 @@ def leagues_for_division():
 
     return jsonify(leagues_result)
 
+@app.route("/game", methods=["GET"])
+@login_required
+def game():
+    if not request.args.get("id"):
+      return apology("must provide group_id", BAD_REQUEST)
+    game_id = int(request.args.get("game_id"))
+
+    games_result = db.execute("""
+
+	SELECT * FROM games WHERE id = :game_id
+
+    """, game_id=game_id)
+
+    if len(games_result) != 1:
+            return apology("couldn't find game", NOT_FOUND)
+
+
+    print game_id
+    return render_template("game.html", game=game)
+
 @app.route("/games", methods=["GET"])
 @login_required
 def games():
     games_result = db.execute("""
-        SELECT game_date, game_type, divisions.name as division, leagues.name as team1_league,
-        leagues2.name as team2_league
+        SELECT games.id as game_id, game_date, game_type, divisions.name as division, leagues.name as team1_league,
+        leagues2.name as team2_league, team1_points, team2_points
          FROM games
         JOIN game_types ON game_type_id = game_types.id
         JOIN teams team_1_data ON team_1_data.id = team1_id
@@ -370,55 +391,42 @@ def enter():
 
         return redirect("/games/")
 
-def calculate_group_ranking_point_averages(start_date, end_date, group_id=None):
-
-	kwargs = dict({
-		"start_date": start_date,
-		"end_date": end_date,
-	})
-
-	if group_id is None:
-		group_id_filter_str = "1"
-	else:
-		group_id_filter_str = "group_id = :group_id"
-		kwargs["group_id"] = group_id
+def calculate_group_ranking_point_averages(start_date, end_date, group_id):
 
 	result = db.execute("""
 			SELECT league_id, team_id, group_name, group_id, division_name,
 			league_name, division_id, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as team_group_rp_average FROM
 			(
-				SELECT teams.id as team_id, groups.name as group_name, group_id, games.id,
+				SELECT league_id, teams.id as team_id, groups.name as group_name, group_id, games.id,
 				CASE WHEN games.team1_id = teams.id
 				THEN game_ranking_points.team1_ranking_points
 				ELSE game_ranking_points.team2_ranking_points END team_game_group_ranking_points,
 				divisions.name division_name, divisions.id division_id, leagues.name league_name, leagues.id
-				FROM teams 
+				FROM teams
 				JOIN (SELECT * FROM games WHERE game_date >= :start_date AND game_date <= :end_date) games 
 					ON games.team1_id = teams.id OR games.team2_id = teams.id
 				JOIN game_ranking_points ON game_ranking_points.game_id = games.id
 				JOIN divisions ON divisions.id = teams.division_id
 				JOIN leagues ON leagues.id = teams.league_id
 				JOIN groups ON groups.id = group_id
-				WHERE """ + group_id_filter_str + """
+				WHERE group_id = :group_id
 			)
 			GROUP BY team_id, group_id
 			ORDER BY team_group_rp_average DESC
-	""", **kwargs)
+	""", start_date=start_date, end_date=end_date, group_id=group_id)
 	division_group_rankings = defaultdict(lambda: [])
 
 	division_names = dict({})
-	group_names = dict({})
 
 	for row in result:
-		group_names[row["group_id"]] = row["group_name"]
-		division_names[row["division_id"]] = row["division_name"]
-		division_group_rankings[row["group_id"], row["division_id"]].append({
+		print "row", row
+		division_group_rankings[row["division_name"]].append({
 			"league_id": row["league_id"],
-			"league": row["league"],
+			"league": row["league_name"],
 			"rp_average": row["team_group_rp_average"]
 		})
 
-	return group_names, division_names, division_group_rankings
+	return division_group_rankings
 
 @app.route("/recalculate", methods=["POST", "GET"])
 @login_required
@@ -466,11 +474,11 @@ def recalculate():
 			GROUP BY division_id, group_id
 		)
 
-		INSERT INTO team_group_strength_ratings (batch_id, team_id, group_id, strength_rating) 
+		INSERT INTO team_group_strength_ratings (batch_id, team_id, group_id, strength_rating)
 
-		SELECT :batch_id, team_id, group_id, ranking_point_average * 1.0/ median_rpa strength_rating FROM ranking_point_averages rpa
+		SELECT :batch_id, team_id, rpa.group_id, ranking_point_average * 1.0/ median_rpa strength_rating FROM ranking_point_averages rpa
 		JOIN teams ON teams.id = rpa.team_id
-		JOIN median_ranking_point_averages mrpa ON mrpa.division_id = teams.division_id
+		JOIN median_ranking_point_averages mrpa ON mrpa.division_id = teams.division_id AND mrpa.group_id = rpa.group_id
 
 	""", batch_id=batch_id, start_date=start_date, end_date=end_date)
 
@@ -484,7 +492,6 @@ def recalculate():
 @app.route("/rankings", methods=["GET"])
 @login_required
 def rankings():
-
 
     groups_result = db.execute("SELECT id, name FROM groups")
     group_names = {}
@@ -506,63 +513,13 @@ def rankings():
     start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
     end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
 
-    group_names, division_names, division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date, group_id=group_id)
-    return render_template("rankings.html", group_names=group_names, division_names=division_names, division_group_rankings=division_group_rankings, start_date=start_date_raw, end_date=end_date_raw, group_id=group_id_raw)
+    division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date, group_id=group_id)
+    return render_template("rankings.html", group_names=group_names, division_group_rankings=division_group_rankings, start_date=start_date_raw, end_date=end_date_raw, group_id=group_id_raw)
 
 
 @app.route("/ratings", methods=["GET"])
 @login_required
 def ratings():
-
-    if not request.args.get("start_date"):
-        return apology("must provide start date", 400)
-
-	start_date_raw = request.args.get("start_date")
-
-        if not request.args.get("end_date"):
-            return apology("must provide end date", 400)
-
-	end_date_raw = request.args.get("end_date")
-
-	start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
-	end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
-
-        # Query database for username
-        team_ranking_point_averages = db.execute("""
-                SELECT team_id, division_id, SUM(ranking_points) * 1.0 / COUNT(ranking_points) avg_ranking_points, COUNT(ranking_points) n_games FROM
-                (
-                        SELECT w_ranking_points ranking_points, w_team_id team_id, game_date FROM games
-                        UNION ALL
-                        SELECT l_ranking_points, l_team_id, game_date FROM games
-                ) flat_games
-                JOIN teams ON teams.id = team_id
-		WHERE game_date >= :start_date AND game_date <= :end_date
-                GROUP BY team_id
-	""", start_date=start_date, end_date=end_date)
-
-	rps_in_division = defaultdict(lambda: [])
-	print team_ranking_point_averages
-	for rp_average in team_ranking_point_averages:
-		n_games = rp_average["n_games"]
-		avg_ranking_points = rp_average["avg_ranking_points"]
-		division_id = rp_average["division_id"]
-		team_id = rp_average["team_id"]
-		print n_games
-
-		if n_games > 2:
-			rps_in_division[division_id].append(avg_ranking_points)
-
-	medians = defaultdict(lambda: None)
-
-	print rps_in_division, "RPS IN DIVISION"
-
-	for division_id, ranking_point_averages in rps_in_division.iteritems():			
-		print median(ranking_point_averages), ranking_point_averages
-		medians[division_id] = median(ranking_point_averages)
-
-	for rp_average in team_ranking_point_averages:
-		rp_average["median"] = medians[rp_average["division_id"]] 
-		rp_average["strength_rating"] = rp_average["avg_ranking_points"] * 1.0 / rp_average["median"]
 
 	return render_template("ratings.html", team_ranking_point_averages=team_ranking_point_averages)
 
