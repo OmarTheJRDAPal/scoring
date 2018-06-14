@@ -5,6 +5,32 @@
 {% endblock %}
 
 {% block main %}
+<form action="/games" method="get">
+<label for="division_select">Division</label>
+<select name="division_id" id="division_select">
+    <option value=""></option>
+  {% for division in divisions %}
+    <option value="{{division["id"]}}">{{division["name"]}}</option>
+  {% endfor %}
+</select>
+<label for="league1_select">League 1</label>
+<select name="league1_id" id="league1_select">
+  <option value=""></option>
+  {% for league in leagues %}
+    {{"c" + league["id"] + "b"}}
+    {{"c" + league1_id + "c"}}
+    <option value="{{league["id"]}}" {{"selected" if league1_id == league["id"] else ""}}>{{league["name"]}}</option>
+  {% endfor %}
+</select>
+<label for="league2_select">League 2</label>
+<select name="league2_id" id="league2_select">
+  <option value=""></option>
+  {% for league in leagues %}
+    <option value="{{league["id"]}}" {{"selected" if league2_id == league["id"] else ""}}>{{league["name"]}}</option>
+  {% endfor %}
+</select>
+<input type="submit" value="Filter"/>
+</form>
 <table class="table">
   <tr>
     <th>Date</th>

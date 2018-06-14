@@ -229,24 +229,47 @@ def leagues_for_division():
 def game():
     if not request.args.get("id"):
       return apology("must provide group_id", BAD_REQUEST)
-    game_id = int(request.args.get("game_id"))
+    game_id = int(request.args.get("id"))
 
     games_result = db.execute("""
+        SELECT games.id as game_id, game_date, game_type, divisions.name as division, leagues.name as team1_league,
+        leagues2.name as team2_league, team1_points, team2_points, team1_expulsions, team2_expulsions
+         FROM games
+        JOIN game_types ON game_type_id = game_types.id
+        JOIN teams team_1_data ON team_1_data.id = team1_id
+        JOIN leagues ON leagues.id = team_1_data.league_id
+        JOIN teams team_2_data ON team_2_data.id = team2_id
+        JOIN leagues leagues2 ON leagues2.id = team_2_data.league_id
+        JOIN divisions ON divisions.id = team_1_data.division_id
+	WHERE games.id = :game_id
+    """, game_id=game_id)
 
-	SELECT * FROM games WHERE id = :game_id
-
+    game_ranking_points = db.execute("""
+	SELECT groups.name, team1_ranking_points, team2_ranking_points FROM game_ranking_points
+	JOIN groups ON groups.id = game_ranking_points.group_id
+	WHERE game_ranking_points.game_id = :game_id
     """, game_id=game_id)
 
     if len(games_result) != 1:
             return apology("couldn't find game", NOT_FOUND)
 
+    game = games_result[0]
+    game["ranking_points"] = game_ranking_points
 
-    print game_id
     return render_template("game.html", game=game)
 
 @app.route("/games", methods=["GET"])
 @login_required
 def games():
+
+    divisions_result = db.execute("""
+	SELECT id, name FROM divisions
+    """)
+
+    leagues_result = db.execute("""
+	SELECT id, name FROM leagues
+    """)
+
     games_result = db.execute("""
         SELECT games.id as game_id, game_date, game_type, divisions.name as division, leagues.name as team1_league,
         leagues2.name as team2_league, team1_points, team2_points
@@ -258,7 +281,32 @@ def games():
         JOIN leagues leagues2 ON leagues2.id = team_2_data.league_id
         JOIN divisions ON divisions.id = team_1_data.division_id
     """)
-    return render_template("games.html", games=games_result)
+
+    if request.args.get("division_id"):
+      division_id = request.args.get("division_id")
+    else:
+      division_id = ""
+
+    if request.args.get("league1_id"):
+      league1_id = request.args.get("league1_id")
+    else:
+      league1_id = ""
+
+    if request.args.get("league2_id"):
+      league2_id = request.args.get("league2_id")
+    else:
+      league2_id = ""
+
+    print "division id", division_id, "league 1 id",  league1_id, "league 2 id", league2_id
+
+    return render_template("games.html",
+      games=games_result,
+      divisions=divisions_result,
+      leagues=leagues_result,
+      division_id=division_id,
+      league1_id=league1_id,
+      league2_id=league2_id
+    )
 
 @app.route("/median", methods=["GET"])
 @login_required
