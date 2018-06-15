@@ -475,6 +475,11 @@ def recalculate():
 
 		SELECT :batch_id, team_id, group_id, 
 
+<<<<<<< HEAD
+=======
+		SELECT :batch_id, team_id, group_id, 
+
+>>>>>>> e099c7e... test
 		CASE WHEN num_games >= 3 OR (has_strength_rating AND num_games >= 2) THEN -- eligible 
 		ranking_point_average * 1.0/ median_rpa strength_rating ELSE
 		NULL END as new_strength
