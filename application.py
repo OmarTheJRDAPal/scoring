@@ -440,6 +440,10 @@ def recalculate():
 
 	db.execute("""
 
+		WITH has_strength_now AS (
+			SELECT team_id, group_id, strength_rating IS NOT NULL FROM team_group_strength_ratings
+			JOIN application_settings ON batch_id = strength_rating_batch_id
+		)
 		WITH ranking_point_averages AS (
 		        SELECT team_id, group_id,
                 	        SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as ranking_point_average FROM
@@ -461,14 +465,20 @@ def recalculate():
 
 
 		), median_ranking_point_averages AS (
-			SELECT division_id, group_id, MEDIAN(rpa.ranking_point_average) median_rpa FROM ranking_point_averages rpa
+			SELECT division_id, group_id, MEDIAN(rpa.ranking_point_average) median_rpa, COUNT(*) num_games
+			FROM ranking_point_averages rpa
 			JOIN teams ON teams.id = rpa.team_id
 			GROUP BY division_id, group_id
 		)
 
 		INSERT INTO team_group_strength_ratings (batch_id, team_id, group_id, strength_rating) 
 
-		SELECT :batch_id, team_id, group_id, ranking_point_average * 1.0/ median_rpa strength_rating FROM ranking_point_averages rpa
+		SELECT :batch_id, team_id, group_id, 
+
+		CASE WHEN num_games >= 3 OR (has_strength_rating AND num_games >= 2) THEN -- eligible 
+		ranking_point_average * 1.0/ median_rpa strength_rating ELSE
+		NULL END as new_strength
+		FROM ranking_point_averages rpa
 		JOIN teams ON teams.id = rpa.team_id
 		JOIN median_ranking_point_averages mrpa ON mrpa.division_id = teams.division_id
 
