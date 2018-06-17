@@ -5,12 +5,39 @@
 {% endblock %}
 
 {% block main %}
-<table>
+<form action="/games" method="get">
+<label for="division_select">Division</label>
+<select name="division_id" id="division_select">
+    <option value=""></option>
+  {% for division in divisions %}
+    <option value="{{division["id"]}}">{{division["name"]}}</option>
+  {% endfor %}
+</select>
+<label for="league1_select">League 1</label>
+<select name="league1_id" id="league1_select">
+  <option value=""></option>
+  {% for league in leagues %}
+    {{"c" + league["id"] + "b"}}
+    {{"c" + league1_id + "c"}}
+    <option value="{{league["id"]}}" {{"selected" if league1_id == league["id"] else ""}}>{{league["name"]}}</option>
+  {% endfor %}
+</select>
+<label for="league2_select">League 2</label>
+<select name="league2_id" id="league2_select">
+  <option value=""></option>
+  {% for league in leagues %}
+    <option value="{{league["id"]}}" {{"selected" if league2_id == league["id"] else ""}}>{{league["name"]}}</option>
+  {% endfor %}
+</select>
+<input type="submit" value="Filter"/>
+</form>
+<table class="table">
   <tr>
     <th>Date</th>
     <th>Type</th>
-    <th>League</th>
     <th>Division</th>
+    <th>League</th>
+    <th>League</th>
     <th>Team 1 Points</th>
     <th>Team 2 Points</th>
   </tr>
@@ -19,11 +46,14 @@
     <tr>
       <td>{{game["game_date"]}}</td>
       <td>{{game["game_type"]}}</td>
-      <td>{{game["league"]}}</td>
-      <td>{{game["team1_division"]}}</td>
+      <td>{{game["division"]}}</td>
+      <td>{{game["team1_league"]}}</td>
+      <td>{{game["team2_league"]}}</td>
       <td>{{game["team1_points"]}}</td>
       <td>{{game["team2_points"]}}</td>
+      <td><a href="/game?id={{game["game_id"]}}"><button>More</button></a></td>
     </tr>
+    </a>
   {% endfor %}
 </table>
 {% endblock %}
