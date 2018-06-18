@@ -50,7 +50,7 @@ CREATE TABLE team_group_strength_ratings (
 	batch_id INTEGER,
 	team_id INTEGER,
 	group_id DECIMAL,
-        strength_rating DECIMAL
+    strength_rating DECIMAL
 );
 
 CREATE TABLE game_ranking_points (
@@ -73,9 +73,6 @@ CREATE TABLE games (
     team2_expulsions INTEGER
 );
 
-CREATE TABLE application_settings (
-	strength_rating_batch_id INTEGER
-);
 
 
 CREATE TABLE users (

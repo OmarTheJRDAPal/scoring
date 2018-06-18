@@ -224,11 +224,72 @@ def leagues_for_division():
 
     return jsonify(leagues_result)
 
+@app.route("/team", methods=["GET"])
+@login_required
+def team():
+    if not request.args.get("id"):
+      return apology("must provide id", BAD_REQUEST)
+    team_id = int(request.args.get("id"))
+
+    teams_result = db.execute("""
+	SELECT leagues.name league, divisions.name as division FROM teams 
+        JOIN leagues ON leagues.id = teams.league_id
+        JOIN divisions ON divisions.id = teams.division_id
+        WHERE teams.id = :team_id
+    """, team_id=team_id)
+
+    if len(teams_result) != 1:
+            return apology("couldn't find team", NOT_FOUND)
+
+    team = teams_result[0]
+
+    team_strength_ratings_result = db.execute("""
+        SELECT * FROM team_group_strength_ratings
+        JOIN groups ON groups.id = group_id
+        WHERE team_id = :team_id
+    """, team_id=team_id)
+
+
+"""
+CREATE TABLE game_ranking_points (
+    id INTEGER PRIMARY KEY,
+        game_id INTEGER,
+    group_id INTEGER,
+    team1_ranking_points DECIMAL,
+    team2_ranking_points DECIMAL
+);
+
+CREATE TABLE games (
+    id INTEGER PRIMARY KEY,
+    game_date DATE,
+    game_type_id INTEGER,
+    team1_id INTEGER,
+    team1_points INTEGER,
+    team1_expulsions INTEGER,
+    team2_id INTEGER,
+    team2_points INTEGER,
+    team2_expulsions INTEGER
+);
+
+
+"""
+    games_result = db.execute("""
+        SELECT * FROM games 
+        JOIN game_ranking_points ON game_id = games.id
+        JOIN application
+        WHERE team1_id = :team_id OR team2_id = :team_id
+
+    """, team_id=team_id)
+
+
+    team["strength_ratings"] = team_strength_ratings_result
+    return render_template("team.html", team=team)
+
 @app.route("/game", methods=["GET"])
 @login_required
 def game():
     if not request.args.get("id"):
-      return apology("must provide group_id", BAD_REQUEST)
+      return apology("must provide game id", BAD_REQUEST)
     game_id = int(request.args.get("id"))
 
     games_result = db.execute("""
@@ -491,16 +552,15 @@ def recalculate():
         start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
         end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
 
-        batch_id = db.execute("""INSERT INTO strength_rating_batches (name) VALUES (:sr_name)""",
-		  sr_name=sr_name)
+        batch_id = db.execute("""INSERT INTO strength_rating_batches (name, start_date, end_date) VALUES (:sr_name, :start_date, :end_date)""",
+		  sr_name=sr_name, start_date=start_date, end_date=end_date)
 
 	db.execute("""
 
 		WITH has_strength_now AS (
-			SELECT team_id, group_id, strength_rating IS NOT NULL FROM team_group_strength_ratings
+			SELECT team_id, group_id, strength_rating IS NOT NULL as has_strength_rating FROM team_group_strength_ratings
 			JOIN application_settings ON batch_id = strength_rating_batch_id
-		)
-		WITH ranking_point_averages AS (
+		), ranking_point_averages AS (
 		        SELECT team_id, group_id,
                 	        SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as ranking_point_average FROM
                         	(
@@ -528,23 +588,13 @@ def recalculate():
 		)
 
 		INSERT INTO team_group_strength_ratings (batch_id, team_id, group_id, strength_rating)
-
-<<<<<<< HEAD
-		SELECT :batch_id, team_id, group_id, 
-
-<<<<<<< HEAD
-=======
-		SELECT :batch_id, team_id, group_id, 
-
->>>>>>> e099c7e... test
+		SELECT :batch_id, rpa.team_id, rpa.group_id, 
 		CASE WHEN num_games >= 3 OR (has_strength_rating AND num_games >= 2) THEN -- eligible 
-		ranking_point_average * 1.0/ median_rpa strength_rating ELSE
-		NULL END as new_strength
+		ranking_point_average * 1.0/ median_rpa ELSE
+		NULL END as strength_rating
 		FROM ranking_point_averages rpa
-=======
-		SELECT :batch_id, team_id, rpa.group_id, ranking_point_average * 1.0/ median_rpa strength_rating FROM ranking_point_averages rpa
->>>>>>> dc0f2b4e0f5bb2ca2b2fed7ac9f8967ef589da41
 		JOIN teams ON teams.id = rpa.team_id
+        JOIN has_strength_now ON has_strength_now.team_id = teams.id AND has_strength_now.group_id = rpa.group_id
 		JOIN median_ranking_point_averages mrpa ON mrpa.division_id = teams.division_id AND mrpa.group_id = rpa.group_id
 
 	""", batch_id=batch_id, start_date=start_date, end_date=end_date)
