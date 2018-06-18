@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block title %}
+	Team
+{% endblock %}
+
+{% block main %}
+    <h1>{{team["league"]}}</h1>
+    <h2>Division: {{team["division"]}}</h2>
+    <div class="container-fluid">
+    <div class="row-fluid">
+    <div class="span6">
+    <h3>Strength Ratings</h3>
+    <table class="table table-striped">
+    	<tr>
+    		<th>Group</th>
+    		<th>Current Strength Rating</th>
+    	</tr>
+  		{% for strength_rating in team["strength_ratings"] %}
+    		<tr>
+    			<td>{{strength_rating["name"]}}</td>
+    			<td>{{strength_rating["strength_rating"]}}</td>
+    		</tr>
+  		{% endfor %}
+
+    </table>
+    </div>
+    <div class="span6">
+    <h3>Recent Games</h3>
+    </div>
+    </div>
+    </div>
+
+    {{team}}
+{% endblock %}
