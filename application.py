@@ -250,10 +250,10 @@ def team():
     """, team_id=team_id)
 
 
-"""
-CREATE TABLE game_ranking_points (
-    id INTEGER PRIMARY KEY,
-        game_id INTEGER,
+    """
+	CREATE TABLE game_ranking_points (
+	    id INTEGER PRIMARY KEY,
+	        game_id INTEGER,
     group_id INTEGER,
     team1_ranking_points DECIMAL,
     team2_ranking_points DECIMAL
@@ -271,8 +271,8 @@ CREATE TABLE games (
     team2_expulsions INTEGER
 );
 
+    """
 
-"""
     games_result = db.execute("""
         SELECT * FROM games 
         JOIN game_ranking_points ON game_id = games.id
@@ -331,6 +331,28 @@ def games():
 	SELECT id, name FROM leagues
     """)
 
+    kwargs = dict({})
+
+    if request.args.get("division_id"):
+      division_id = int(request.args.get("division_id"))
+      kwargs["division_id"] = division_id
+      division_filter_clause = "division_id = :division_id"
+    else:
+      division_id = ""
+
+    if request.args.get("league1_id"):
+      league1_id = int(request.args.get("league1_id"))
+    else:
+      league1_id = ""
+
+    if request.args.get("league2_id"):
+      league2_id = int(request.args.get("league2_id"))
+    else:
+      league2_id = ""
+
+    print "division id", division_id, "league 1 id",  league1_id, "league 2 id", league2_id
+
+
     games_result = db.execute("""
         SELECT games.id as game_id, game_date, game_type, divisions.name as division, leagues.name as team1_league,
         leagues2.name as team2_league, team1_points, team2_points
@@ -341,24 +363,9 @@ def games():
         JOIN teams team_2_data ON team_2_data.id = team2_id
         JOIN leagues leagues2 ON leagues2.id = team_2_data.league_id
         JOIN divisions ON divisions.id = team_1_data.division_id
-    """)
+	WHERE """ + division_filter_clause + 
+    """, **kwargs)
 
-    if request.args.get("division_id"):
-      division_id = request.args.get("division_id")
-    else:
-      division_id = ""
-
-    if request.args.get("league1_id"):
-      league1_id = request.args.get("league1_id")
-    else:
-      league1_id = ""
-
-    if request.args.get("league2_id"):
-      league2_id = request.args.get("league2_id")
-    else:
-      league2_id = ""
-
-    print "division id", division_id, "league 1 id",  league1_id, "league 2 id", league2_id
 
     return render_template("games.html",
       games=games_result,
@@ -498,7 +505,7 @@ def enter():
 			VALUES (:game_id, :group_id, :team1_group_rp, :team2_group_rp)
 		""", game_id=game_id, group_id=group_id, team1_group_rp=team1_group_rp, team2_group_rp=team2_group_rp)
 
-        return redirect("/games/")
+        return redirect("/games")
 
 def calculate_group_ranking_point_averages(start_date, end_date, group_id):
 

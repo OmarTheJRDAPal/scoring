@@ -10,15 +10,13 @@
 <select name="division_id" id="division_select">
     <option value=""></option>
   {% for division in divisions %}
-    <option value="{{division["id"]}}">{{division["name"]}}</option>
+    <option value="{{division["id"]}}" {{"selected" if division_id == division["id"] else ""}}>{{division["name"]}}</option>
   {% endfor %}
 </select>
 <label for="league1_select">League 1</label>
 <select name="league1_id" id="league1_select">
   <option value=""></option>
   {% for league in leagues %}
-    {{"c" + league["id"] + "b"}}
-    {{"c" + league1_id + "c"}}
     <option value="{{league["id"]}}" {{"selected" if league1_id == league["id"] else ""}}>{{league["name"]}}</option>
   {% endfor %}
 </select>
