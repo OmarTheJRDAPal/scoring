@@ -42,7 +42,9 @@ CREATE TABLE teams (
 
 CREATE TABLE strength_rating_batches (
 	id INTEGER PRIMARY KEY,
-	name VARCHAR
+	name VARCHAR,
+	start_date DATE,
+	end_date DATE
 );
 
 CREATE TABLE team_group_strength_ratings (
@@ -59,6 +61,10 @@ CREATE TABLE game_ranking_points (
 	group_id INTEGER,
 	team1_ranking_points DECIMAL,
 	team2_ranking_points DECIMAL
+);
+
+CREATE TABLE application_settings (
+	strength_rating_batch_id INTEGER
 );
 
 CREATE TABLE games (
