@@ -17,9 +17,9 @@ INSERT INTO strength_rating_batches (name, start_date, end_date) VALUES (
 
 );
 
-INSERT INTO team_group_strength_ratings (team_id, group_id, strength_rating, batch_id) VALUES (
-  1, 1, .8, 1
-);
+--INSERT INTO team_group_strength_ratings (team_id, group_id, strength_rating, batch_id) VALUES (
+--  1, 1, .8, 1
+--);
 
 INSERT INTO team_group_strength_ratings (team_id, group_id, strength_rating, batch_id) VALUES (
   2, 1, 1.2, 1

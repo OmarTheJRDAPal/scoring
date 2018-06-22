@@ -336,18 +336,25 @@ def games():
     if request.args.get("division_id"):
       division_id = int(request.args.get("division_id"))
       kwargs["division_id"] = division_id
-      division_filter_clause = "division_id = :division_id"
+      division_filter_clause = "divisions.id = :division_id"
     else:
+      division_filter_clause = "1"
       division_id = ""
 
     if request.args.get("league1_id"):
       league1_id = int(request.args.get("league1_id"))
+      kwargs["league1_id"] = league1_id
+      league1_filter_clause = "(leagues.id = :league1_id OR leagues2.id = :league1_id)"
     else:
+      league1_filter_clause = "1"
       league1_id = ""
 
     if request.args.get("league2_id"):
       league2_id = int(request.args.get("league2_id"))
+      kwargs["league2_id"] = league2_id
+      league2_filter_clause = "(leagues.id = :league2_id OR leagues2.id = :league2_id)"
     else:
+      league2_filter_clause = "1"  
       league2_id = ""
 
     print "division id", division_id, "league 1 id",  league1_id, "league 2 id", league2_id
@@ -364,7 +371,7 @@ def games():
         JOIN leagues leagues2 ON leagues2.id = team_2_data.league_id
         JOIN divisions ON divisions.id = team_1_data.division_id
 	WHERE """ + division_filter_clause + 
-    """, **kwargs)
+    " AND " + league1_filter_clause + " AND " + league2_filter_clause, **kwargs)
 
 
     return render_template("games.html",
@@ -431,7 +438,7 @@ def enter():
         team2_id = int(request.form.get("team2_id"))
 
         sr_results = db.execute("""
-		SELECT common_groups.group_id as group_id, IFNULL(t1.strength_rating, 1.0) team1, IFNULL(t2.strength_rating, 1.0) team2 FROM (
+		SELECT common_groups.group_id as group_id, t1.strength_rating team1, t2.strength_rating team2 FROM (
 			SELECT t1.group_id FROM group_memberships t1
 			JOIN (
 				SELECT * FROM group_memberships WHERE team_id = :team2_id
