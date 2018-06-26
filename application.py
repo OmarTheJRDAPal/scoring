@@ -631,30 +631,20 @@ def rankings():
 
     start_date_raw = request.args.get("start_date")
     end_date_raw = request.args.get("end_date")
+
     group_id_raw = request.args.get("group_id")
 
     if not start_date_raw or not end_date_raw or not group_id_raw:
-        return render_template("rankings.html", group_names=group_names, start_date=start_date_raw, end_date=end_date_raw, group_id=group_id_raw)
-
-    if not request.args.get("group_id"):
-        return apology("must provide group id", 400)
-
-    group_id = int(group_id_raw)
-
-    start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
-    end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
+      group_id = 1
+      start_date = datetime.datetime.now - # TODO subtract time off this
+      end_date = datetime.datetime.now()
+    else:
+      start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
+      end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
+      group_id = int(group_id_raw)
 
     division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date, group_id=group_id)
     return render_template("rankings.html", group_names=group_names, division_group_rankings=division_group_rankings, start_date=start_date_raw, end_date=end_date_raw, group_id=group_id_raw)
-
-
-@app.route("/ratings", methods=["GET"])
-@login_required
-def ratings():
-
-	return render_template("ratings.html", team_ranking_point_averages=team_ranking_point_averages)
-
-
 
 def errorhandler(e):
     """Handle error"""
