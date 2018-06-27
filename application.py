@@ -3,6 +3,7 @@ from collections import defaultdict
 from flask import Flask, flash, redirect, render_template, request, session, jsonify
 from flask_session import Session
 import datetime
+from dateutil import relativedelta
 from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -244,9 +245,10 @@ def team():
     team = teams_result[0]
 
     team_strength_ratings_result = db.execute("""
-        SELECT * FROM team_group_strength_ratings
+        SELECT * FROM team_group_strength_ratings tgsr
         JOIN groups ON groups.id = group_id
-        WHERE team_id = :team_id
+        JOIN (SELECT * FROM application_settings LIMIT 1) application_settings ON 1
+        WHERE team_id = :team_id AND tgsr.batch_id = application_settings.strength_rating_batch_id
     """, team_id=team_id)
 
 
@@ -276,12 +278,11 @@ CREATE TABLE games (
     games_result = db.execute("""
         SELECT * FROM games 
         JOIN game_ranking_points ON game_id = games.id
-        JOIN application
         WHERE team1_id = :team_id OR team2_id = :team_id
-
     """, team_id=team_id)
 
 
+    team["games"] = games_result
     team["strength_ratings"] = team_strength_ratings_result
     return render_template("team.html", team=team)
 
@@ -634,17 +635,25 @@ def rankings():
 
     group_id_raw = request.args.get("group_id")
 
+    print start_date_raw, end_date_raw, group_id_raw
+
     if not start_date_raw or not end_date_raw or not group_id_raw:
+      today = datetime.date.today()
+      first = today.replace(day=1)
+      end_date = first - datetime.timedelta(days=1)
+      start_date = end_date - relativedelta.relativedelta(months=8)# TODO subtract time off this
       group_id = 1
-      start_date = datetime.datetime.now - # TODO subtract time off this
-      end_date = datetime.datetime.now()
+      print "DEFAULTS", start_date, end_date, group_id
     else:
-      start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
-      end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
+      start_datetime = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
+      end_datetime = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
+      start_date = datetime.date(start_datetime.year, start_datetime.month, start_datetime.day)
+      end_date = datetime.date(end_datetime.year, end_datetime.month, end_datetime.day)
       group_id = int(group_id_raw)
+      print "PARSED", start_date, end_date, group_id
 
     division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date, group_id=group_id)
-    return render_template("rankings.html", group_names=group_names, division_group_rankings=division_group_rankings, start_date=start_date_raw, end_date=end_date_raw, group_id=group_id_raw)
+    return render_template("rankings.html", group_names=group_names, division_group_rankings=division_group_rankings, start_date=start_date, end_date=end_date, group_id=group_id_raw)
 
 def errorhandler(e):
     """Handle error"""
