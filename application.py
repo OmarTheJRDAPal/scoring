@@ -245,12 +245,13 @@ def team():
     team = teams_result[0]
 
     team_strength_ratings_result = db.execute("""
-        SELECT * FROM team_group_strength_ratings tgsr
-        JOIN groups ON groups.id = group_id
+        SELECT * FROM groups
+        LEFT JOIN team_group_strength_ratings tgsr ON tgsr.group_id = groups.id AND team_id = :team_id AND
+	tgsr.batch_id = 1 AND application_settings.strength_rating_batch_id
         JOIN (SELECT * FROM application_settings LIMIT 1) application_settings ON 1
-        WHERE team_id = :team_id AND tgsr.batch_id = application_settings.strength_rating_batch_id
     """, team_id=team_id)
 
+    print team_strength_ratings_result
 
     """
 	CREATE TABLE game_ranking_points (
