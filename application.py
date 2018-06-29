@@ -225,6 +225,26 @@ def leagues_for_division():
 
     return jsonify(leagues_result)
 
+@app.route("/add_team", methods=["POST"])
+@login_required
+def add_team():
+    if not request.form.get("division_id"):
+      return apology("must provide division id", BAD_REQUEST)
+    division_id = int(request.form.get("division_id"))
+
+    if not request.form.get("league_id"):
+      return apology("must provide league id", BAD_REQUEST)
+    league_id = int(request.form.get("league_id"))
+
+    team_id = db.execute("""INSERT INTO teams (league_id, division_id) VALUES (:league_id, :division_id)""",
+	league_id=league_id, division_id=division_id)
+    print team_id
+    if team_id == None:
+      flash("Could not create team", "error")
+    else:
+      flash("Successfully created team", "success")
+    return redirect("/add")
+
 @app.route("/team", methods=["GET"])
 @login_required
 def team():
@@ -244,6 +264,7 @@ def team():
 
     team = teams_result[0]
 
+
     team_strength_ratings_result = db.execute("""
         SELECT * FROM groups
         LEFT JOIN team_group_strength_ratings tgsr ON tgsr.group_id = groups.id AND team_id = :team_id AND
@@ -253,33 +274,16 @@ def team():
 
     print team_strength_ratings_result
 
-    """
-	CREATE TABLE game_ranking_points (
-	    id INTEGER PRIMARY KEY,
-	        game_id INTEGER,
-    group_id INTEGER,
-    team1_ranking_points DECIMAL,
-    team2_ranking_points DECIMAL
-);
-
-CREATE TABLE games (
-    id INTEGER PRIMARY KEY,
-    game_date DATE,
-    game_type_id INTEGER,
-    team1_id INTEGER,
-    team1_points INTEGER,
-    team1_expulsions INTEGER,
-    team2_id INTEGER,
-    team2_points INTEGER,
-    team2_expulsions INTEGER
-);
-
-    """
-
     games_result = db.execute("""
         SELECT * FROM games 
         JOIN game_ranking_points ON game_id = games.id
+	JOIN game_types ON game_types.id = game_type_id
+	JOIN teams t1 ON t1.id = games.team1_id
+	JOIN teams t2 ON t2.id = games.team2_id
+	JOIN leagues l1 ON l1.id = t1.league_id
+	JOIN leagues l2 ON l2.id = t2.league_id
         WHERE team1_id = :team_id OR team2_id = :team_id
+	ORDER BY game_date DESC
     """, team_id=team_id)
 
 
@@ -393,6 +397,18 @@ def median_egbert():
       """)
    for row in divisions_result:
 	print row
+
+@app.route("/add", methods=["GET", "POST"])
+@login_required
+def add():
+    if request.method == "GET":
+      divisions_result = db.execute("""
+          SELECT * FROM divisions
+      """)
+      leagues_result = db.execute("""
+          SELECT id, name FROM leagues
+      """)
+      return render_template("add.html", divisions=divisions_result, leagues=leagues_result)
 
 
 

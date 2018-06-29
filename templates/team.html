@@ -27,6 +27,22 @@
     </div>
     <div class="span6">
     <h3>Recent Games</h3>
+    <table class="table table-striped">
+    	<tr>
+    		<th>Date</th>
+    		<th>Game Type</th>
+		<th>Team 1</th>
+		<th>Team 2</th>
+    	</tr>
+  		{% for game in team["games"] %}
+    		<tr>
+    			<td>{{game["game_date"]}}</td>
+    			<td>{{game["game_type"]}}</td>
+    		</tr>
+  		{% endfor %}
+
+    </table>
+
     </div>
     </div>
     </div>

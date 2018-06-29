@@ -1,7 +1,7 @@
 import csv
 import urllib
 
-from flask import redirect, render_template, request, session
+from flask import redirect, render_template, request, session, flash
 from functools import wraps
 
 

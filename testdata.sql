@@ -12,6 +12,8 @@ INSERT INTO leagues (name) VALUES ("Bearville");
 INSERT INTO teams (league_id, division_id) VALUES (1, 1);
 INSERT INTO teams (league_id, division_id) VALUES (2, 1);
 
+CREATE UNIQUE INDEX ld ON teams(league_id, division_id);
+
 INSERT INTO strength_rating_batches (name, start_date, end_date) VALUES (
 	"Default batch", "2000-05-19", "2020-06-2018"
 
