@@ -111,50 +111,53 @@ def login():
     else:
         return render_template("login.html")
 
-@app.route("/register", methods=["GET", "POST"])
+@app.route("/register", methods=["POST"])
 def register():
     """Log user in"""
 
-    # Forget any user_id
-    session.clear()
+    this_user_id = session["user_id"]
 
-    # User reached route via POST (as by submitting a form via POST)
-    if request.method == "POST":
+    rows = db.execute("SELECT * FROM users WHERE id = :user_id",
+                      user_id=this_user_id)
 
-	username = str(request.form.get("username"))
-	password = str(request.form.get("password"))
+    hash_value = str(generate_password_hash("jrda"))
+    print "HASHVALUE", hash_value
 
-        # Ensure username was submitted
-        if not username:
-            return apology("must provide username", 403)
+    if len(rows) != 1:
+      return apology("internal server error", 500)
 
-        # Ensure password was submitted
-        elif not password:
-            return apology("must provide password", 403)
+    if not rows[0]["admin"]:
+      return apology("you do not have permission to create a new user")
 
-	print username, password
+    username = str(request.form.get("username"))
+    password = str(request.form.get("password"))
 
-        # Query database for username
-        rows = db.execute("SELECT * FROM users WHERE username = :username",
-                          username=username)
+    # Ensure username was submitted
+    if not username:
+      return apology("must provide username", 403)
 
-	print "here"
+    # Ensure password was submitted
+    elif not password:
+      return apology("must provide password", 403)
 
-        # Ensure username exists and password is correct
-        if len(rows) > 0:
-            return apology("username already exists", 403)
-        else:
-            hash_value = str(generate_password_hash(password))
-            result = db.execute("INSERT INTO users (username, hash) VALUES (:username, :hash)", username=username, hash=hash_value)
-            print result
-            # Remember which user has logged in
-            session["user_id"] = result
-            # Redirect user to home page
-            return redirect("/")
+    admin = 0
+    if request.form.get("admin"):
+      admin = 1
 
-    # User reached route via GET (as by clicking a link or via redirect)
+    # Query database for username
+    rows = db.execute("SELECT * FROM users WHERE username = :username",
+                      username=username)
+
+    # Ensure username exists and password is correct
+    if len(rows) > 0:
+      flash("That username %s already exists" % (username), "danger")
     else:
-        return render_template("register.html")
+      hash_value = str(generate_password_hash(password))
+      result = db.execute("INSERT INTO users (username, hash, admin) VALUES (:username, :hash, :admin)", username=username, hash=hash_value, admin=admin)
+      flash("Successfully created user %s" % (username), "success")
+
+    return redirect("/add")
+
 
 
 @app.route("/logout")
@@ -225,6 +228,26 @@ def leagues_for_division():
 
     return jsonify(leagues_result)
 
+@app.route("/add_league", methods=["POST"])
+@login_required
+def add_league():
+    if not request.form.get("league_name"):
+      return apology("must provide league name", BAD_REQUEST)
+    league_name = str(request.form.get("league_name"))
+
+    print league_name
+
+    league_id = db.execute("""
+	INSERT INTO leagues (name) VALUES (:name)
+    """, name=league_name)
+
+    if league_id == None:
+      flash("Could not create league", "danger")
+    else:
+      flash("Successfully created league with id " + str(league_id), "success")
+    return redirect("/add")
+
+
 @app.route("/add_team", methods=["POST"])
 @login_required
 def add_team():
@@ -238,11 +261,11 @@ def add_team():
 
     team_id = db.execute("""INSERT INTO teams (league_id, division_id) VALUES (:league_id, :division_id)""",
 	league_id=league_id, division_id=division_id)
-    print team_id
+
     if team_id == None:
-      flash("Could not create team", "error")
+      flash("Could not create team", "danger")
     else:
-      flash("Successfully created team", "success")
+      flash("Successfully created team with id " + str(team_id), "success")
     return redirect("/add")
 
 @app.route("/team", methods=["GET"])

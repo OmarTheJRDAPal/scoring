@@ -84,7 +84,9 @@ CREATE TABLE games (
 CREATE TABLE users (
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	username TEXT NOT NULL,
-	hash TEXT NOT NULL
+	hash TEXT NOT NULL,
+	admin BOOLEAN NOT NULL
 );
 
 CREATE UNIQUE INDEX 'username' ON "users" ("username");
+

@@ -3,33 +3,44 @@
 {% block title %}
     Add Some Objects
 {% endblock %}
-
-
 {% block main %}
   {{message}}
   <h2>Add a League</h1>
   <form action="/add_league" method="post">
     <label for="league_name_input">League Name</label>
-      <input type="text" name="league_name" id="league_name_input"/>
-      <input type="submit"/>
+      <input type="text" name="league_name" id="league_name_input" class="form-control"/>
+      <input type="submit" class="btn btn-primary"/>
   </form>
   <hr/>
   <h2>Add a Team</h2>
   <form action="/add_team" method="post">
     <label for="league_id">League</label>
-    <select id="team_league_select" name="league_id">
+    <select id="team_league_select" name="league_id" class="form-control">
        {% for league in leagues %}
          <option value="{{ league["id"] }}">{{ league["name"] }}</div>
        {% endfor %}
     </select>
     <br/>
     <label for="division_id">Division</label>
-    <select id="team_division_select" name="division_id">
+    <select id="team_division_select" name="division_id" class="form-control">
        {% for division in divisions %}
          <option value="{{ division["id"] }}">{{ division["name"] }}</div>
        {% endfor %}
     </select>
     <br/>
-    <input type="submit"/>
+    <input type="submit" class="btn btn-primary"/>
   </form>
+  <h2>Add a User</h2>
+    <form action="/register" method="post">
+        <div class="form-group">
+            <input autocomplete="off" autofocus class="form-control" name="username" placeholder="Username" type="text"/>
+        </div>
+        <div class="form-group">
+            <input class="form-control" name="password" placeholder="Password" type="password"/>
+            <input class="form-control" name="password2" placeholder="Password Again" type="password"/>
+            <input class="form-control" name="admin" type="checkbox"/>make admin?
+        </div>
+        <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
+
 {% endblock %}

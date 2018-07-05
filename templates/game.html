@@ -4,6 +4,31 @@
     Game
 {% endblock %}
 
+{{game}}
+
 {% block main %}
+ <h1>{{game["team1_league"]}} vs. {{game["team2_league"]}}</h1>
+ <h2>{{game["division"]}} Division, {{game["game_type"]}}</h2>
+ <h3>{{game["game_date"]}}</h3>
+ <table class="table table-striped">
+   <tr>
+     <th></th>
+     <th>{{game["team1_league"]}}</th>
+     <th>{{game["team2_league"]}}</th>
+   </tr>
+   <tr>
+     <td>Points</td>
+     <td>{{game["team1_points"]}}</td>
+     <td>{{game["team2_points"]}}</td>
+   </tr>
+   <tr>
+     <td>Expulsions</td>
+     <td>{{game["team1_expulsions"]}}</td>
+     <td>{{game["team2_expulsions"]}}</td>
+   </tr>
+   <tr>
+     <td>
+   </tr>
+ </table>
  {{game}}
 {% endblock %}

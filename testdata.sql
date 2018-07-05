@@ -84,3 +84,11 @@ INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id
 	0,
 	1 -- Normal game
 );
+
+INSERT INTO users (username, hash, admin) VALUES (
+	"admin",
+	"pbkdf2:sha256:50000$iPHUDSbc$b50c5aa72ffb222c0850369bf77871bbac0e90d725ee38daa6946e2eeca9dad6",
+	1
+);
+
+
