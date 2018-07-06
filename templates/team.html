@@ -30,14 +30,16 @@
     <table class="table table-striped">
     	<tr>
     		<th>Date</th>
-    		<th>Game Type</th>
 		<th>Team 1</th>
 		<th>Team 2</th>
+		<th>more?...</th>
     	</tr>
   		{% for game in team["games"] %}
     		<tr>
     			<td>{{game["game_date"]}}</td>
-    			<td>{{game["game_type"]}}</td>
+			<td>{{game["l1_name"]}}</td>
+			<td>{{game["l2_name"]}}</td>
+			<td><a href="/game?id={{game["game_id"]}}"><button>More</button></a></td>
     		</tr>
   		{% endfor %}
 

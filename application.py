@@ -311,14 +311,14 @@ def team():
     team_strength_ratings_result = db.execute("""
         SELECT * FROM groups
         LEFT JOIN team_group_strength_ratings tgsr ON tgsr.group_id = groups.id AND team_id = :team_id AND
-	tgsr.batch_id = 1 AND application_settings.strength_rating_batch_id
+	tgsr.batch_id =  application_settings.strength_rating_batch_id
         JOIN (SELECT * FROM application_settings LIMIT 1) application_settings ON 1
     """, team_id=team_id)
 
     print team_strength_ratings_result
 
     games_result = db.execute("""
-        SELECT * FROM games 
+        SELECT *, l1.name as l1_name, l2.name as l2_name FROM games 
         JOIN game_ranking_points ON game_id = games.id
 	JOIN game_types ON game_types.id = game_type_id
 	JOIN teams t1 ON t1.id = games.team1_id
