@@ -52,7 +52,8 @@ INSERT INTO game_ranking_points (game_id, group_id, team1_ranking_points, team2_
 VALUES (3, 1, 150.10, 50.10);
 
 
-INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id, team2_points, team2_expulsions, game_type_id) VALUES (
+INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id, team2_points, team2_expulsions, game_type_id, 
+entered_date, created_user_id) VALUES (
 	"2018-02-15",
 	1,
 	100,
@@ -60,10 +61,14 @@ INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id
 	2,
 	50,
 	0,
-	1 -- Normal game
+	1, -- Normal game
+        "2018-02-16",
+        1
+
 );
 
-INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id, team2_points, team2_expulsions, game_type_id) VALUES (
+INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id, team2_points, team2_expulsions, game_type_id,
+entered_date, created_user_id) VALUES (
 	"2018-02-16",
 	1,
 	100,
@@ -71,10 +76,14 @@ INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id
 	2,
 	50,
 	0,
-	1 -- Normal game
+	1, -- Normal game
+        "2018-02-17",
+        1
 );
 
-INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id, team2_points, team2_expulsions, game_type_id) VALUES (
+INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id, team2_points, team2_expulsions, game_type_id,
+entered_date, created_user_id
+) VALUES (
 	"2018-02-17",
 	1,
 	100,
@@ -82,7 +91,9 @@ INSERT INTO games (game_date, team1_id, team1_points, team1_expulsions, team2_id
 	2,
 	50,
 	0,
-	1 -- Normal game
+	1, -- Normal game
+        "2018-02-18",
+        1
 );
 
 INSERT INTO users (username, hash, admin) VALUES (

@@ -55,20 +55,10 @@ CREATE TABLE team_group_strength_ratings (
     strength_rating DECIMAL
 );
 
-CREATE TABLE game_ranking_points (
-	id INTEGER PRIMARY KEY,
-        game_id INTEGER,
-	group_id INTEGER,
-	team1_ranking_points DECIMAL,
-	team2_ranking_points DECIMAL
-);
-
-CREATE TABLE application_settings (
-	strength_rating_batch_id INTEGER
-);
-
 CREATE TABLE games (
 	id INTEGER PRIMARY KEY,
+        entered_date DATE,
+        created_user_id INTEGER,
 	game_date DATE,
 	game_type_id INTEGER,
 	team1_id INTEGER,
@@ -77,6 +67,18 @@ CREATE TABLE games (
     team2_id INTEGER,
     team2_points INTEGER,
     team2_expulsions INTEGER
+);
+
+CREATE TABLE game_ranking_points (
+	id INTEGER PRIMARY KEY,
+        game_id INTEGER REFERENCES games(id) ON DELETE CASCADE,
+	group_id INTEGER,
+	team1_ranking_points DECIMAL,
+	team2_ranking_points DECIMAL
+);
+
+CREATE TABLE application_settings (
+	strength_rating_batch_id INTEGER
 );
 
 

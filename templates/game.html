@@ -26,9 +26,20 @@
      <td>{{game["team1_expulsions"]}}</td>
      <td>{{game["team2_expulsions"]}}</td>
    </tr>
+   {% for ranking_point in game["ranking_points"] %}
    <tr>
-     <td>
+     <td>{{ranking_point["name"]}} Ranking Points</td>
+     <td>{{ranking_point["team1_ranking_points"]}}</td>
+     <td>{{ranking_point["team2_ranking_points"]}}</td>
    </tr>
+   {% endfor %}
  </table>
- {{game}}
+ <form action="/delete_game" method="post">
+   <input type="hidden" name="game_id" value="{{game["game_id"]}}"/>
+   <input type="submit" class="btn btn-danger" value="Delete this game" />
+ </form>
+ <hr/>
+ <footer>
+ <i>Game created by <tt>{{game["username"]}}</tt> on {{game["entered_date"]}}</i>
+ </footer>
 {% endblock %}

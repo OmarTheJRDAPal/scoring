@@ -47,6 +47,7 @@ class NumpyMedianAggregate(object):
 
 def sqlite_memory_engine_creator():
     con = sqlite3.connect('finance.db')
+    con.execute("PRAGMA foreign_keys = ON")
     con.create_aggregate("median", 1, NumpyMedianAggregate)
     return con
 
@@ -111,7 +112,26 @@ def login():
     else:
         return render_template("login.html")
 
+@app.route("/delete_game", methods=["POST"])
+@login_required
+def delete_game():
+    if not request.form.get("game_id"):
+        return apology("must provide game_id", BAD_REQUEST)
+
+    game_id = int(request.form.get("game_id"))
+
+    result = db.execute("""
+	DELETE FROM games WHERE id = :game_id
+    """, game_id=game_id)
+
+    if result:
+      flash("Deleted game", "success")
+    else:
+      flash("Could not delete game", "danger")
+    return redirect("/games")
+
 @app.route("/register", methods=["POST"])
+@login_required
 def register():
     """Log user in"""
 
@@ -323,7 +343,7 @@ def game():
 
     games_result = db.execute("""
         SELECT games.id as game_id, game_date, game_type, divisions.name as division, leagues.name as team1_league,
-        leagues2.name as team2_league, team1_points, team2_points, team1_expulsions, team2_expulsions
+        leagues2.name as team2_league, team1_points, team2_points, team1_expulsions, team2_expulsions, username, entered_date
          FROM games
         JOIN game_types ON game_type_id = game_types.id
         JOIN teams team_1_data ON team_1_data.id = team1_id
@@ -331,6 +351,7 @@ def game():
         JOIN teams team_2_data ON team_2_data.id = team2_id
         JOIN leagues leagues2 ON leagues2.id = team_2_data.league_id
         JOIN divisions ON divisions.id = team_1_data.division_id
+        JOIN users ON users.id = created_user_id
 	WHERE games.id = :game_id
     """, game_id=game_id)
 
