@@ -227,6 +227,14 @@ def ranking_points_for_groups(weight, team, opponent, groups_srs):
 		strengths = groups_srs[group_id]
 		wlp = win_loss_points(team, opponent)
 		psp = point_spread_points(team, opponent)
+
+		both_unranked = strengths[opponent["id"]] is None and strengths[team["id"]] is None
+
+		if both_unranked:
+			opponent_strength = 1.0
+		elif strengths[opponent["id"]] is None:
+			game_
+
 		group_ranking_points[group_id] = ((wlp + psp) / 2.0) * weight * strengths[opponent["id"]] - expulsion_points(team)
 
 	return group_ranking_points
@@ -310,9 +318,9 @@ def team():
 
     team_strength_ratings_result = db.execute("""
         SELECT * FROM groups
+        JOIN (SELECT * FROM application_settings LIMIT 1) application_settings ON 1
         LEFT JOIN team_group_strength_ratings tgsr ON tgsr.group_id = groups.id AND team_id = :team_id AND
 	tgsr.batch_id =  application_settings.strength_rating_batch_id
-        JOIN (SELECT * FROM application_settings LIMIT 1) application_settings ON 1
     """, team_id=team_id)
 
     print team_strength_ratings_result
