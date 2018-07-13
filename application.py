@@ -228,14 +228,17 @@ def ranking_points_for_groups(weight, team, opponent, groups_srs):
 		wlp = win_loss_points(team, opponent)
 		psp = point_spread_points(team, opponent)
 
-		both_unranked = strengths[opponent["id"]] is None and strengths[team["id"]] is None
+		both_unranked = strengths[opponent["id"]] == None and strengths[team["id"]] == None
 
-		if both_unranked:
-			opponent_strength = 1.0
-		elif strengths[opponent["id"]] is None:
-			game_
+        print strengths[opponent["id"]], strengths[opponent["id"]] == None
 
-		group_ranking_points[group_id] = ((wlp + psp) / 2.0) * weight * strengths[opponent["id"]] - expulsion_points(team)
+        if both_unranked:
+            opponent_strength = 1.0
+        elif strengths[opponent["id"]] == None:
+            group_ranking_points[group_id] = None
+        else:
+            print "WLP", wlp, "PSP", psp, "WEIGHT", weight, "strengths", strengths[opponent["id"]], "expulsion points", expulsion_points(team)
+            group_ranking_points[group_id] = ((wlp + psp) / 2.0) * weight * strengths[opponent["id"]] - expulsion_points(team)
 
 	return group_ranking_points
 
