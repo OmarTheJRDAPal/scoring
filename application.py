@@ -352,6 +352,8 @@ def game():
       return apology("must provide game id", BAD_REQUEST)
     game_id = int(request.args.get("id"))
 
+    print game_id
+
     games_result = db.execute("""
         SELECT games.id as game_id, game_date, game_type, divisions.name as division, leagues.name as team1_league,
         leagues2.name as team2_league, team1_points, team2_points, team1_expulsions, team2_expulsions, username, entered_date
@@ -362,7 +364,7 @@ def game():
         JOIN teams team_2_data ON team_2_data.id = team2_id
         JOIN leagues leagues2 ON leagues2.id = team_2_data.league_id
         JOIN divisions ON divisions.id = team_1_data.division_id
-        JOIN users ON users.id = created_user_id
+        LEFT JOIN users ON users.id = created_user_id
 	WHERE games.id = :game_id
     """, game_id=game_id)
 
