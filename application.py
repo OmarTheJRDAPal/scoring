@@ -223,24 +223,28 @@ def lookup_teams(game, teams, reference_team_id):
 def ranking_points_for_groups(weight, team, opponent, groups_srs):
 	group_ranking_points = dict({})
 
+	print "ranking points for groups"
+	print "weight", weight
+	print "team", team
+	print "opponent", opponent
+	print "groups srs", groups_srs
+
         for group_id in groups_srs:
-		strengths = groups_srs[group_id]
-		wlp = win_loss_points(team, opponent)
-		psp = point_spread_points(team, opponent)
+            print group_id, "group_id"
+            strengths = groups_srs[group_id]
+            wlp = win_loss_points(team, opponent)
+            psp = point_spread_points(team, opponent)
+            both_unranked = strengths[opponent["id"]] == None and strengths[team["id"]] == None
+            print both_unranked, "Both unranked", strengths[opponent["id"]], strengths[opponent["id"]] == None
+            if both_unranked:
+                 opponent_strength = 1.0
+            elif strengths[opponent["id"]] == None:
+                 group_ranking_points[group_id] = None
+            else:
+                 print "WLP", wlp, "PSP", psp, "WEIGHT", weight, "strengths", strengths[opponent["id"]], "expulsion points", expulsion_points(team)
+                 group_ranking_points[group_id] = ((wlp + psp) / 2.0) * weight * strengths[opponent["id"]] - expulsion_points(team)
 
-		both_unranked = strengths[opponent["id"]] == None and strengths[team["id"]] == None
-
-        print strengths[opponent["id"]], strengths[opponent["id"]] == None
-
-        if both_unranked:
-            opponent_strength = 1.0
-        elif strengths[opponent["id"]] == None:
-            group_ranking_points[group_id] = None
-        else:
-            print "WLP", wlp, "PSP", psp, "WEIGHT", weight, "strengths", strengths[opponent["id"]], "expulsion points", expulsion_points(team)
-            group_ranking_points[group_id] = ((wlp + psp) / 2.0) * weight * strengths[opponent["id"]] - expulsion_points(team)
-
-	return group_ranking_points
+        return group_ranking_points
 
 @app.route("/leagues_for_division", methods=["GET"])
 @login_required
@@ -490,6 +494,9 @@ def enter():
 
         game_type_id = int(request.form.get("game_type_id"))
 
+        if not request.form.get("game_date"):
+            return apology("must provide game date", BAD_REQUEST)
+
         game_date = str(request.form.get("game_date"))
 
         # Query database for game weight
@@ -511,6 +518,9 @@ def enter():
             return apology("must provide team2_id", BAD_REQUEST)
 
         team2_id = int(request.form.get("team2_id"))
+
+        if team1_id == team2_id:
+            return apology("a team cannot play itself", BAD_REQUEST)
 
         sr_results = db.execute("""
 		SELECT common_groups.group_id as group_id, t1.strength_rating team1, t2.strength_rating team2 FROM (
@@ -569,15 +579,18 @@ def enter():
         team1_ranking_points = ranking_points_for_groups(game_weight, team1_info, team2_info, strength_ratings)
         team2_ranking_points = ranking_points_for_groups(game_weight, team2_info, team1_info, strength_ratings)
 
+	print "TEAM 1 RANKING POINTS", team1_ranking_points
+	print "TEAM 2 RANKING POINTS", team2_ranking_points
+
         game_id = db.execute("""INSERT INTO games (game_date, game_type_id, team1_id, team1_points,
             team1_expulsions, team2_id, team2_points,
-            team2_expulsions) VALUES (:game_date, :game_type_id,
+            team2_expulsions, created_user_id) VALUES (:game_date, :game_type_id,
             :team1_id, :team1_points, :team1_expulsions,
-            :team2_id, :team2_points, :team2_expulsions)""",
+            :team2_id, :team2_points, :team2_expulsions, :user_id)""",
         game_date=game_date, game_type_id=game_type_id,
         team1_id=team1_id, team1_points=team1_points, team1_expulsions=team1_expulsions,
-        team2_id=team2_id, team2_points=team2_points, team2_expulsions=team2_expulsions
-        )
+        team2_id=team2_id, team2_points=team2_points, team2_expulsions=team2_expulsions,
+        user_id=session["user_id"])
 
 	for group_id in team1_ranking_points:
 		team1_group_rp = team1_ranking_points[group_id]

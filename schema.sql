@@ -57,7 +57,7 @@ CREATE TABLE team_group_strength_ratings (
 
 CREATE TABLE games (
 	id INTEGER PRIMARY KEY,
-        entered_date DATE,
+        entered_date DATE DEFAULT CURRENT_DATE,
         created_user_id INTEGER,
 	game_date DATE,
 	game_type_id INTEGER,

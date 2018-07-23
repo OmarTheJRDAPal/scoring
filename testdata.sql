@@ -38,9 +38,13 @@ INSERT INTO game_types (game_type, weight) VALUES ("Semi-Final Bracket", 1.125);
 INSERT INTO game_types (game_type, weight) VALUES ("Final Bracket", 1.175);
 
 INSERT INTO groups (name) VALUES ("Global");
+INSERT INTO groups (name) VALUES ("Cities/states that start with N or P");
 
 INSERT INTO group_memberships (team_id, group_id) VALUES (1, 1);
 INSERT INTO group_memberships (team_id, group_id) VALUES (2, 1);
+
+INSERT INTO group_memberships (team_id, group_id) VALUES (1, 2);
+INSERT INTO group_memberships (team_id, group_id) VALUES (2, 2);
 
 INSERT INTO game_ranking_points (game_id, group_id, team1_ranking_points, team2_ranking_points)
 VALUES (1, 1, 150.10, 50.10);

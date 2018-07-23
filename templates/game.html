@@ -34,6 +34,7 @@
    </tr>
    {% endfor %}
  </table>
+ {{ game }}
  <form action="/delete_game" method="post">
    <input type="hidden" name="game_id" value="{{game["game_id"]}}"/>
    <input type="submit" class="btn btn-danger" value="Delete this game" />
