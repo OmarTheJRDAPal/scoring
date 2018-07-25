@@ -285,6 +285,21 @@ def add_league():
       flash("Successfully created league with id " + str(league_id), "success")
     return redirect("/add")
 
+@app.route("/add_group", methods=["POST"])
+@login_required
+def add_group():
+    if not request.form.get("name"):
+      return apology("must provide group name", BAD_REQUEST)
+    name = request.form.get("name"))
+
+    team_id = db.execute("""INSERT INTO groups (name) VALUES (:name)""",
+    league_id=league_id, division_id=division_id)
+
+    if team_id == None:
+      flash("Could not create team", "danger")
+    else:
+      flash("Successfully created team with id " + str(team_id), "success")
+    return redirect("/add")
 
 @app.route("/add_team", methods=["POST"])
 @login_required
