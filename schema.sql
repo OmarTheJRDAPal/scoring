@@ -37,7 +37,8 @@ CREATE TABLE divisions (
 CREATE TABLE teams (
 	id INTEGER PRIMARY KEY,
 	league_id INTEGER,
-	division_id INTEGER
+	division_id INTEGER,
+        name VARCHAR
 );
 
 CREATE TABLE strength_rating_batches (

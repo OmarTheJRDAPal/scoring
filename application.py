@@ -58,9 +58,7 @@ db = SQL("sqlite:///finance.db", creator=sqlite_memory_engine_creator)
 @app.route("/")
 @login_required
 def index():
-    """Show portfolio of stocks"""
-    return apology("TODO")
-
+    return render_template("index.html")
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
@@ -290,15 +288,15 @@ def add_league():
 def add_group():
     if not request.form.get("name"):
       return apology("must provide group name", BAD_REQUEST)
-    name = request.form.get("name"))
+    name = request.form.get("name")
 
-    team_id = db.execute("""INSERT INTO groups (name) VALUES (:name)""",
-    league_id=league_id, division_id=division_id)
+    group_id = db.execute("""INSERT INTO groups (name) VALUES (:name)""",
+    name=name)
 
-    if team_id == None:
-      flash("Could not create team", "danger")
+    if group_id == None:
+      flash("Could not create group", "danger")
     else:
-      flash("Successfully created team with id " + str(team_id), "success")
+      flash("Successfully created group with id " + str(group_id), "success")
     return redirect("/add")
 
 @app.route("/add_team", methods=["POST"])
@@ -312,8 +310,13 @@ def add_team():
       return apology("must provide league id", BAD_REQUEST)
     league_id = int(request.form.get("league_id"))
 
-    team_id = db.execute("""INSERT INTO teams (league_id, division_id) VALUES (:league_id, :division_id)""",
-	league_id=league_id, division_id=division_id)
+    if not request.form.get("name"):
+      return apology("must provide name")
+
+    name = str(request.form.get("name"))
+
+    team_id = db.execute("""INSERT INTO teams (league_id, division_id, name) VALUES (:league_id, :division_id, :name)""",
+	league_id=league_id, division_id=division_id, name=name)
 
     if team_id == None:
       flash("Could not create team", "danger")
