@@ -42,8 +42,8 @@ class NumpyMedianAggregate(object):
   def step(self, value):
     self.values.append(value)
   def finalize(self):
-    return median(self.values)
-
+    print self.values
+    return median([x for x in self.values if x is not None])
 
 def sqlite_memory_engine_creator():
     con = sqlite3.connect('finance.db')
@@ -288,7 +288,7 @@ def add_league():
 def add_group():
     if not request.form.get("name"):
       return apology("must provide group name", BAD_REQUEST)
-    name = request.form.get("name")
+    name = str(request.form.get("name"))
 
     group_id = db.execute("""INSERT INTO groups (name) VALUES (:name)""",
     name=name)
@@ -347,7 +347,8 @@ def team():
     team_strength_ratings_result = db.execute("""
         SELECT * FROM groups
         JOIN (SELECT * FROM application_settings LIMIT 1) application_settings ON 1
-        LEFT JOIN team_group_strength_ratings tgsr ON tgsr.group_id = groups.id AND team_id = :team_id AND
+        JOIN group_memberships ON group_memberships.team_id = :team_id AND group_memberships.group_id = groups.id
+        LEFT JOIN team_group_strength_ratings tgsr ON tgsr.group_id = groups.id AND tgsr.team_id = :team_id AND
 	tgsr.batch_id =  application_settings.strength_rating_batch_id
     """, team_id=team_id)
 
