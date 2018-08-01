@@ -1,20 +1,20 @@
 $(function () {
 
-	var leagueSelectTmplHtml = $("#leagues_select_menu_template").html();
-	var leagueSelectTmpl = _.template(leagueSelectTmplHtml);
+	var teamSelectTmplHtml = $("#teams_select_menu_template").html();
+	var teamSelectTmpl = _.template(teamSelectTmplHtml);
 	$("#division_select").change(function () {
 		var select = $(this);
 		$.get({
-			url: "/leagues_for_division",
+			url: "/teams_for_division",
 			data: {
 				division_id: select.val(),
 			},
 			success: function (data) {
-				var team1Select = leagueSelectTmpl({
-					leagues: data,
+				var team1Select = teamSelectTmpl({
+					teams: data,
 				});
-				var team2Select = leagueSelectTmpl({
-					leagues: data,
+				var team2Select = teamSelectTmpl({
+					teams: data,
 				});
 				$("#team_1_select").html(team1Select);
 				$("#team_2_select").html(team2Select);

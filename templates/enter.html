@@ -11,9 +11,9 @@
 {% endblock %}
 
 {% block main %}
-  <script type="text/template" id="leagues_select_menu_template">
-  		<% for (var i in leagues) { %>
-			<option value="<%= leagues[i]["team_id"]%>"><%= leagues[i]["name"] %></option>
+  <script type="text/template" id="teams_select_menu_template">
+  		<% for (var i in teams) { %>
+			<option value="<%= teams[i]["team_id"]%>"><%= teams[i]["league_name"] %> - <%= teams[i]["team_name"] %></option>
   		<% } %>
   </script>
   <h1>Enter a Game</h1>
@@ -23,7 +23,7 @@
     <label for="game_type_select">Game Type</label>
   	<select id="game_type_select" name="game_type_id">
 	  {% for game_type in game_types %}
-    	<option value="{{ game_type["id"] }}">{{ game_type["game_type"] }}</div>
+       	<option value="{{ game_type["id"] }}">{{ game_type["game_type"] }}</div>
 	  {% endfor %}
 	  </select>
     <br/>
@@ -36,8 +36,8 @@
     <br/>
     <label for="team_1_select_container">Team 1</label>
 	<select id="team_1_select" name="team1_id">
-  	  {% for league in leagues %}
-      		<option value="{{ league["id"] }}">{{ league["name"] }}</div>
+  	  {% for team in teams %}
+      		<option value="{{ team["team_id"] }}">{{ team["league_name"] }} - {{ team["team_name"]}}</div>
 	  {% endfor %}
 
         </select>
@@ -50,8 +50,8 @@
     <br/>
     <label for="team_2_select_container">Team 2</label>
 	<select id="team_2_select" name="team2_id">
-  	  {% for league in leagues %}
-      		<option value="{{ league["id"] }}">{{ league["name"] }}</div>
+  	  {% for team in teams %}
+      		<option value="{{ team["team_id"] }}">{{ team["league_name"] }} - {{ team["team_name"]}}</div>
 	  {% endfor %}
         </select>
     <br/>

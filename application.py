@@ -73,7 +73,6 @@ def history():
     """Show history of transactions"""
     return apology("TODO")
 
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Log user in"""
@@ -247,22 +246,45 @@ def ranking_points_for_groups(weight, team, opponent, groups_srs):
 
         return group_ranking_points
 
-@app.route("/leagues_for_division", methods=["GET"])
+@app.route("/add_league_to_group", methods=["POST"])
 @login_required
-def leagues_for_division():
+def add_league_to_group():
+    if not request.args.get("league_id"):
+        return apology("must provide league_id", BAD_REQUEST)
+
+    league_id = int(request.args.get("league_id"))
+
+    if not request.args.get("group_id"):
+        return apology("must provide group_id", BAD_REQUEST)
+
+    group_id = int(request.args.get("group_id"))
+
+    result = db.execute("""
+        INSERT INTO group_memberships (league_id, group_id) VALUES (:league_id, :group_id)
+    """, league_id=league_id)
+
+
+        SELECT teams.id as team_id, leagues.name as league_name, teams.name as team_name FROM teams
+        LEFT JOIN leagues ON leagues.id = teams.league_id
+        WHERE division_id = :division_id
+    """, division_id=division_id)
+
+@app.route("/teams_for_division", methods=["GET"])
+@login_required
+def teams_for_division():
 
     if not request.args.get("division_id"):
         return apology("must provide division_id", BAD_REQUEST)
 
     division_id = int(request.args.get("division_id"))
 
-    # Query database for game weight
-    leagues_result = db.execute("""
-        SELECT leagues.id as league_id, teams.id AS team_id, name FROM leagues
-        JOIN (SELECT * FROM teams WHERE division_id = :division_id) teams ON leagues.id = teams.league_id
+    teams_result = db.execute("""
+        SELECT teams.id as team_id, leagues.name as league_name, teams.name as team_name FROM teams
+        LEFT JOIN leagues ON leagues.id = teams.league_id
+        WHERE division_id = :division_id
     """, division_id=division_id)
 
-    return jsonify(leagues_result)
+    return jsonify(teams_result)
 
 @app.route("/add_league", methods=["POST"])
 @login_required
@@ -450,8 +472,9 @@ def games():
 
 
     games_result = db.execute("""
-        SELECT games.id as game_id, game_date, game_type, divisions.name as division, leagues.name as team1_league,
-        leagues2.name as team2_league, team1_points, team2_points
+        SELECT games.id as game_id, game_date, game_type, divisions.name as division,
+        leagues.name as team1_league, team_1_data.name as team1_name,
+        leagues2.name as team2_league, team_2_data.name as team2_name, team1_points, team2_points
          FROM games
         JOIN game_types ON game_type_id = game_types.id
         JOIN teams team_1_data ON team_1_data.id = team1_id
@@ -505,11 +528,11 @@ def enter():
       game_types_result = db.execute("""
           SELECT * FROM game_types
       """)
-      leagues_result = db.execute("""
-          SELECT id, name FROM leagues
+      teams_result = db.execute("""
+        SELECT teams.id as team_id, leagues.name as league_name, teams.name as team_name FROM teams
+        LEFT JOIN leagues ON leagues.id = teams.league_id
       """)
-
-      return render_template("enter.html", divisions=divisions_result, game_types=game_types_result, leagues=leagues_result)
+      return render_template("enter.html", divisions=divisions_result, game_types=game_types_result, teams=teams_result)
     else:
         if not request.form.get("game_type_id"):
             return apology("must provide game_type_id", BAD_REQUEST)

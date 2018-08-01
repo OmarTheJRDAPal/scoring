@@ -14,7 +14,7 @@ CREATE TABLE groups (
 );
 
 CREATE TABLE group_memberships (
-	team_id INTEGER,
+	league_id INTEGER,
 	group_id INTEGER
 );
 
