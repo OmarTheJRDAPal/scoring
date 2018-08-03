@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Group: {{grp["name"]}}
+{% endblock %}
+
+{{game}}
+
+{% block main %}
+ <h1>Group: {{grp["name"]}}</h1>
+   <h2>Leagues in this group</h2>
+   <table class="table table-striped">
+   {% for league in leagues %}
+   <tr>
+     <td>{{league["name"]}}</td>
+   </tr>
+   {% endfor %}
+ </table>
+ <form action="/add_league_to_group" method="POST">
+   <label for="league_select">Add a league to this group:</label>
+   <input type="hidden" value="{{grp_id}}" name="group_id"/>
+   <select id="league_select" name="league_id">
+     {% for league in not_leagues %}
+       <option value="{{league["id"]}}"/>
+         {{league["name"]}}
+       </option>
+     {% endfor %}
+   </select>
+   <input type="submit" value="Go"/>
+ </form>
+{% endblock %}

@@ -10,6 +10,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import sqlite3
 BAD_REQUEST = 400
 NOT_FOUND = 404
+INTERNAL_ERROR = 500
 
 from numpy import median
 
@@ -249,25 +250,67 @@ def ranking_points_for_groups(weight, team, opponent, groups_srs):
 @app.route("/add_league_to_group", methods=["POST"])
 @login_required
 def add_league_to_group():
-    if not request.args.get("league_id"):
+    if not request.form.get("league_id"):
         return apology("must provide league_id", BAD_REQUEST)
 
-    league_id = int(request.args.get("league_id"))
+    league_id = int(request.form.get("league_id"))
 
-    if not request.args.get("group_id"):
+    if not request.form.get("group_id"):
         return apology("must provide group_id", BAD_REQUEST)
 
-    group_id = int(request.args.get("group_id"))
+    group_id = int(request.form.get("group_id"))
 
     result = db.execute("""
         INSERT INTO group_memberships (league_id, group_id) VALUES (:league_id, :group_id)
-    """, league_id=league_id)
+    """, league_id=league_id, group_id=group_id)
+
+    if result == None:
+      flash("Could not add league to group", "danger")
+    else:
+      flash("Successfully added league to group", "success")
+    return redirect("/group?id=" + str(group_id))
+
+@app.route("/group", methods=["GET"])
+@login_required
+def grp():
+    if not request.args.get("id"):
+        return apology("must provide id", BAD_REQUEST)
+
+    group_id = int(request.args.get("id"))
+
+    grp_result = db.execute("""
+        SELECT id, name FROM groups WHERE id = :group_id
+    """, group_id=group_id)
+
+    if len(grp_result) == 1:
+      grp_result = grp_result[0]
+    else:
+      return apology("could not find group with that ID", NOT_FOUND)
+
+    leagues_result = db.execute("""
+	SELECT leagues.name FROM group_memberships JOIN leagues ON leagues.id = group_memberships.league_id
+        WHERE group_memberships.group_id = :group_id
+    """, group_id=group_id)
 
 
-        SELECT teams.id as team_id, leagues.name as league_name, teams.name as team_name FROM teams
-        LEFT JOIN leagues ON leagues.id = teams.league_id
-        WHERE division_id = :division_id
-    """, division_id=division_id)
+    not_leagues_result = db.execute("""
+        SELECT leagues.id, leagues.name FROM leagues WHERE leagues.id NOT IN (SELECT league_id FROM group_memberships WHERE
+        group_id = :group_id)
+    """, group_id=group_id)
+
+
+    print "LEAGUES RESULT", leagues_result
+    print "GRP RESULT", grp_result
+    print "GROUP ID", group_id
+    return render_template("group.html", leagues=leagues_result, grp=grp_result, grp_id=group_id, not_leagues=not_leagues_result)
+
+@app.route("/groups", methods=["GET"])
+@login_required
+def groups():
+    groups_result = db.execute("""
+        SELECT id, name FROM groups
+    """)
+    return render_template("groups.html", grps=groups_result)
 
 @app.route("/teams_for_division", methods=["GET"])
 @login_required
@@ -369,7 +412,8 @@ def team():
     team_strength_ratings_result = db.execute("""
         SELECT * FROM groups
         JOIN (SELECT * FROM application_settings LIMIT 1) application_settings ON 1
-        JOIN group_memberships ON group_memberships.team_id = :team_id AND group_memberships.group_id = groups.id
+        JOIN teams ON teams.id = :team_id
+        JOIN group_memberships ON group_memberships.league_id = teams.league_id AND group_memberships.group_id = groups.id
         LEFT JOIN team_group_strength_ratings tgsr ON tgsr.group_id = groups.id AND tgsr.team_id = :team_id AND
 	tgsr.batch_id =  application_settings.strength_rating_batch_id
     """, team_id=team_id)
@@ -399,8 +443,6 @@ def game():
     if not request.args.get("id"):
       return apology("must provide game id", BAD_REQUEST)
     game_id = int(request.args.get("id"))
-
-    print game_id
 
     games_result = db.execute("""
         SELECT games.id as game_id, game_date, game_type, divisions.name as division, leagues.name as team1_league,
@@ -571,8 +613,12 @@ def enter():
 		SELECT common_groups.group_id as group_id, t1.strength_rating team1, t2.strength_rating team2 FROM (
 			SELECT t1.group_id FROM group_memberships t1
 			JOIN (
-				SELECT * FROM group_memberships WHERE team_id = :team2_id
-			) t2 ON t2.group_id = t1.group_id WHERE t1.team_id = :team1_id
+				SELECT group_memberships.* FROM teams
+				JOIN group_memberships ON group_memberships.league_id = teams.league_id
+				WHERE teams.id = :team2_id
+			) t2 ON t2.group_id = t1.group_id
+			JOIN teams ON teams.id = :team1_id
+			WHERE t1.league_id = teams.league_id
 		) common_groups
 		JOIN (SELECT strength_rating_batch_id batch_id FROM application_settings LIMIT 1) settings ON 1
 		LEFT JOIN team_group_strength_ratings t1 ON t1.group_id = common_groups.group_id AND t1.team_id = :team1_id AND settings.batch_id = t1.batch_id
@@ -684,6 +730,25 @@ def calculate_group_ranking_point_averages(start_date, end_date, group_id):
 
 	return division_group_rankings
 
+@app.route("/sr_batches", methods=["GET"])
+@login_required
+def sr_batches():
+    batches_result = db.execute("""
+        SELECT id, name, start_date, end_date, computed_on FROM strength_rating_batches
+    """)
+
+    current_batch_result = db.execute("""
+	SELECT strength_rating_batch_id FROM application_settings LIMIT 1
+    """)
+
+    if len(current_batch_result) != 1:
+	# TODO: handle error
+	pass
+
+    current_batch = current_batch_result[0]["strength_rating_batch_id"]
+
+    return render_template("batches.html", batches=batches_result, current_batch=current_batch)
+
 @app.route("/recalculate", methods=["POST", "GET"])
 @login_required
 def recalculate():
@@ -760,7 +825,7 @@ def rankings():
     groups_result = db.execute("SELECT id, name FROM groups")
     group_names = {}
     for row in groups_result:
-        group_names[row["id"]] = row["name"]
+        group_names[str(row["id"])] = row["name"]
 
     start_date_raw = request.args.get("start_date")
     end_date_raw = request.args.get("end_date")
@@ -785,7 +850,8 @@ def rankings():
       print "PARSED", start_date, end_date, group_id
 
     division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date, group_id=group_id)
-    return render_template("rankings.html", group_names=group_names, division_group_rankings=division_group_rankings, start_date=start_date, end_date=end_date, group_id=group_id_raw)
+    print division_group_rankings, "DIVISION GROUP RANKINGS"
+    return render_template("rankings.html", group_names=group_names, division_group_rankings=division_group_rankings, start_date=start_date, end_date=end_date, grp_id=str(group_id))
 
 def errorhandler(e):
     """Handle error"""

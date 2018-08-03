@@ -12,8 +12,8 @@ INSERT INTO leagues (name) VALUES ("Bearville");
 INSERT INTO teams (league_id, division_id, name) VALUES (1, 1, "Omar and Fox");
 INSERT INTO teams (league_id, division_id, name) VALUES (2, 1, "Wildcats");
 
-INSERT INTO strength_rating_batches (name, start_date, end_date) VALUES (
-	"Default batch", "2000-05-19", "2020-06-2018"
+INSERT INTO strength_rating_batches (name, start_date, end_date, computed_on) VALUES (
+	"Default batch", "2000-05-19", "2020-06-18", "2020-07-19"
 
 );
 

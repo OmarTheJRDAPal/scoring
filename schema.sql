@@ -45,7 +45,8 @@ CREATE TABLE strength_rating_batches (
 	id INTEGER PRIMARY KEY,
 	name VARCHAR,
 	start_date DATE,
-	end_date DATE
+	end_date DATE,
+	computed_on DATE
 );
 
 CREATE TABLE team_group_strength_ratings (

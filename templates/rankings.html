@@ -13,11 +13,10 @@
 		    <label for="end_date_input">End Date</label>
 	        <input type="date" name="end_date" id="end_date_input" value="{{end_date}}"/>	        
 
-
 		    <label for="group_select">Group</label>
-		  	<select id="group_select" name="group_id" value="{{group_id}}">
+		  	<select id="group_select" name="group_id">
 	  		{% for id in group_names %}
-		    	<option value="{{ id}}">{{ group_names[id] }}</option>
+		    	<option value="{{ id}}" {{"selected" if id == grp_id else ""}}>{{ group_names[id] }}</option>
 	  		{% endfor %}
 	    	</select>
         </div>

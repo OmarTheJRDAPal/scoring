@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Batches
+{% endblock %}
+
+{{game}}
+
+{% block main %}
+ <h1>Batches</h1>
+   <table class="table table-striped">
+  <tr>
+    <th>Name</th>
+    <th>Start Date</th>
+    <th>End Date</th>
+    <th>Computed On</th>
+    <th>more detail?</th>
+  </tr>
+   {% for batch in batches %}
+   <tr>
+      <td>{{batch["name"]}}</td>
+      <td>{{batch["start_date"]}}</td>
+      <td>{{batch["end_date"]}}</td>
+      <td>{{batch["computed_on"]}}</td>
+      <td><a href="/sr_batch?id={{batch["id"]}}">{{batch["name"]}}</a></td>
+    </tr>
+   {% endfor %}
+ </table>
+{% endblock %}

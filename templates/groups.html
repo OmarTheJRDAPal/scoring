@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Groups
+{% endblock %}
+
+{{game}}
+
+{% block main %}
+ <h1>Groups</h1>
+   <table class="table table-striped">
+   {% for grp in grps %}
+   <tr>
+     <td><a href="/group?id={{grp["id"]}}">{{grp["name"]}}</a></td>
+   </tr>
+   {% endfor %}
+ </table>
+{% endblock %}
