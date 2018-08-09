@@ -730,6 +730,56 @@ def calculate_group_ranking_point_averages(start_date, end_date, group_id):
 
 	return division_group_rankings
 
+@app.route("/sr_batch", methods=["GET"])
+@login_required
+def sr_batch():
+
+    if not request.args.get("id"):
+       return apology("must provide id", BAD_REQUEST)
+
+    batch_id = int(request.args.get("id"))
+
+    batch_result = db.execute("""
+        SELECT team_id, teams.name as team_name, leagues.name as league_name, divisions.name as division_name, group_id, groups.name as group_name, strength_rating FROM team_group_strength_ratings
+        JOIN teams ON teams.id = team_id
+        JOIN divisions ON teams.division_id = divisions.id
+        JOIN leagues ON teams.league_id = leagues.id
+        JOIN groups ON groups.id = group_id
+        WHERE batch_id = :batch_id
+    """, batch_id=batch_id)
+
+    batch = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [])))
+    for row in batch_result:
+      batch[row["division_name"]][row["league_name"]][row["team_name"]].append({
+        "team_id": row["team_id"],
+        "group_id": row["group_id"],
+        "group_name": row["group_name"],
+        "strength_rating": row["strength_rating"]
+      })
+    print batch
+
+    return render_template("batch.html", batch=batch)
+
+@app.route("/switch_to_batch", methods=["GET"])
+@login_required
+def switch_to_batch():
+
+    if not request.args.get("id"):
+       return apology("must provide id", BAD_REQUEST)
+
+    batch_id = int(request.args.get("id"))
+
+    result = db.execute("""
+      UPDATE application_settings SET strength_rating_batch_id = :batch_id
+    """, batch_id=batch_id)
+
+    if result == None:
+      flash("Could not switch the batch", "danger")
+    else:
+      flash("Successfully created team with id " + str(batch_id), "success")
+
+    return redirect("/sr_batches")
+
 @app.route("/sr_batches", methods=["GET"])
 @login_required
 def sr_batches():

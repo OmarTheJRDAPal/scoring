@@ -14,6 +14,7 @@
     <th>Start Date</th>
     <th>End Date</th>
     <th>Computed On</th>
+    <th>In use?</th>
     <th>more detail?</th>
   </tr>
    {% for batch in batches %}
@@ -22,7 +23,13 @@
       <td>{{batch["start_date"]}}</td>
       <td>{{batch["end_date"]}}</td>
       <td>{{batch["computed_on"]}}</td>
-      <td><a href="/sr_batch?id={{batch["id"]}}">{{batch["name"]}}</a></td>
+      <td>{% if current_batch == batch["id"] %}
+	This is the selected batch
+      {% else %}
+	<a href="/switch_to_batch?id={{batch["id"]}}"<button>Switch to this batch</button></a>
+      </td>
+      {% endif %}
+      <td><a href="/sr_batch?id={{batch["id"]}}"><button>More detail</button></a></td>
     </tr>
    {% endfor %}
  </table>
