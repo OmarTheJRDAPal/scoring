@@ -312,6 +312,14 @@ def groups():
     """)
     return render_template("groups.html", grps=groups_result)
 
+@app.route("/users", methods=["GET"])
+@login_required
+def users():
+    users_result = db.execute("""
+        SELECT id, username, admin FROM users
+    """)
+    return render_template("users.html", users=users_result)
+
 @app.route("/teams_for_division", methods=["GET"])
 @login_required
 def teams_for_division():
@@ -693,46 +701,90 @@ def enter():
 
         return redirect("/games")
 
-def calculate_group_ranking_point_averages(start_date, end_date, group_id):
-
+def fetch_batch_rankings(batch_id, group_id):
 	result = db.execute("""
-			SELECT league_id, team_id, group_name, group_id, division_name,
-			league_name, division_id, SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as team_group_rp_average FROM
-			(
-				SELECT league_id, teams.id as team_id, groups.name as group_name, group_id, games.id,
-				CASE WHEN games.team1_id = teams.id
-				THEN game_ranking_points.team1_ranking_points
-				ELSE game_ranking_points.team2_ranking_points END team_game_group_ranking_points,
-				divisions.name division_name, divisions.id division_id, leagues.name league_name, leagues.id
-				FROM teams
-				JOIN (SELECT * FROM games WHERE game_date >= :start_date AND game_date <= :end_date) games 
-					ON games.team1_id = teams.id OR games.team2_id = teams.id
-				JOIN game_ranking_points ON game_ranking_points.game_id = games.id
-				JOIN divisions ON divisions.id = teams.division_id
-				JOIN leagues ON leagues.id = teams.league_id
-				JOIN groups ON groups.id = group_id
-				WHERE group_id = :group_id
-			)
-			GROUP BY team_id, group_id
-			ORDER BY team_group_rp_average DESC
-	""", start_date=start_date, end_date=end_date, group_id=group_id)
+		SELECT league_id, team_id, group_id, divisions.name as division_name, leagues.name as league_name, division_id, ranking_point_average, teams.name as name
+		FROM team_group_rankings
+		JOIN teams ON teams.id = team_id
+                JOIN divisions ON divisions.id = teams.division_id
+                JOIN leagues ON leagues.id = teams.league_id
+                JOIN groups ON groups.id = group_id
+                WHERE group_id = :group_id AND batch_id = :batch_id
+        """, group_id=group_id, batch_id=batch_id)
+
 	division_group_rankings = defaultdict(lambda: [])
 
-	division_names = dict({})
-
 	for row in result:
-		print "row", row
 		division_group_rankings[row["division_name"]].append({
 			"league_id": row["league_id"],
 			"league": row["league_name"],
-			"rp_average": row["team_group_rp_average"]
+			"rp_average": row["ranking_point_average"],
+			"name": row["name"]
 		})
 
 	return division_group_rankings
 
-@app.route("/sr_batch", methods=["GET"])
+def fetch_batch_strengths(batch_id, group_id):
+	result = db.execute("""
+		SELECT league_id, team_id, group_id, divisions.name as division_name, leagues.name as league_name, division_id, strength_rating, teams.name as name
+		FROM team_group_strength_ratings
+		JOIN teams ON teams.id = team_id
+                JOIN divisions ON divisions.id = teams.division_id
+                JOIN leagues ON leagues.id = teams.league_id
+                JOIN groups ON groups.id = group_id
+                WHERE group_id = :group_id AND batch_id = :batch_id
+        """, group_id=group_id, batch_id=batch_id)
+
+	division_group_strengths = defaultdict(lambda: [])
+
+	for row in result:
+		division_group_strengths[row["division_name"]].append({
+			"league_id": row["league_id"],
+			"league": row["league_name"],
+			"strength_rating": row["strength_rating"],
+			"name": row["name"]
+		})
+
+	return division_group_strengths
+
+@app.route("/strengths", methods=["GET"])
 @login_required
 def sr_batch():
+
+    groups_result = db.execute("SELECT id, name FROM groups")
+    group_names = {}
+    for row in groups_result:
+        group_names[str(row["id"])] = row["name"]
+
+    batches_result = db.execute("SELECT id, name FROM strength_rating_batches")
+    batch_names = {}
+    for row in batches_result:
+        batch_names[str(row["id"])] = row["name"]
+
+    group_id_raw = request.args.get("group_id")
+    if group_id_raw:
+      group_id = int(group_id_raw)
+    else:
+      group_id = 1
+
+    batch_id_raw = request.args.get("batch_id")
+    if batch_id_raw:
+      batch_id = int(batch_id_raw)
+    else:
+      current_batch_result = db.execute("""
+        SELECT strength_rating_batch_id FROM application_settings LIMIT 1
+      """)
+
+      if len(current_batch_result) != 1:
+        # TODO: handle error
+        pass
+
+      batch_id = int(current_batch_result[0]["strength_rating_batch_id"])
+
+    division_group_strengths = fetch_batch_strengths(batch_id, group_id)
+    print division_group_strengths, "DIVISION GROUP STRENGTHS"
+    return render_template("strengths.html", group_names=group_names, division_group_strengths=division_group_strengths, grp_id=str(group_id), batch_id=str(batch_id), batch_names=batch_names)
+
 
     if not request.args.get("id"):
        return apology("must provide id", BAD_REQUEST)
@@ -748,14 +800,17 @@ def sr_batch():
         WHERE batch_id = :batch_id
     """, batch_id=batch_id)
 
-    batch = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [])))
+    groups_for_league = db.execute("""
+
+    """)
+
+    batch = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: None))))
     for row in batch_result:
-      batch[row["division_name"]][row["league_name"]][row["team_name"]].append({
+      batch[row["division_name"]][row["league_name"]][row["team_name"]][row["group_name"]] = {
         "team_id": row["team_id"],
         "group_id": row["group_id"],
-        "group_name": row["group_name"],
         "strength_rating": row["strength_rating"]
-      })
+      }
     print batch
 
     return render_template("batch.html", batch=batch)
@@ -769,6 +824,13 @@ def switch_to_batch():
 
     batch_id = int(request.args.get("id"))
 
+    lookup_batch_result = db.execute("""
+        SELECT id FROM strength_rating_batches WHERE id = :id
+    """, id=batch_id)
+
+    if len(lookup_batch_result) != 1:
+         return apology("batch does not exist", BAD_REQUEST)
+
     result = db.execute("""
       UPDATE application_settings SET strength_rating_batch_id = :batch_id
     """, batch_id=batch_id)
@@ -776,7 +838,7 @@ def switch_to_batch():
     if result == None:
       flash("Could not switch the batch", "danger")
     else:
-      flash("Successfully created team with id " + str(batch_id), "success")
+      flash("Successfully switched to batch " + str(batch_id), "success")
 
     return redirect("/sr_batches")
 
@@ -808,14 +870,22 @@ def recalculate():
 
         start_date_raw = request.form.get("start_date")
         end_date_raw = request.form.get("end_date")
+
+        rankings_start_date_raw = request.form.get("start_date")
+        rankings_end_date_raw = request.form.get("end_date")
         sr_name = str(request.form.get("strength_rating_memo"))
         print start_date_raw, end_date_raw, sr_name
 
         start_date = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
         end_date = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
 
-        batch_id = db.execute("""INSERT INTO strength_rating_batches (name, start_date, end_date) VALUES (:sr_name, :start_date, :end_date)""",
-		  sr_name=sr_name, start_date=start_date, end_date=end_date)
+        rankings_start_date = datetime.datetime.strptime(rankings_start_date_raw, "%Y-%m-%d")
+        rankings_end_date = datetime.datetime.strptime(rankings_end_date_raw, "%Y-%m-%d")
+
+	computed_on = datetime.datetime.now()
+
+        batch_id = db.execute("""INSERT INTO strength_rating_batches (name, start_date, end_date, computed_on) VALUES (:sr_name, :start_date, :end_date, :computed_on)""",
+		  sr_name=sr_name, start_date=start_date, end_date=end_date, computed_on=computed_on)
 
 	db.execute("""
 
@@ -862,7 +932,48 @@ def recalculate():
 	""", batch_id=batch_id, start_date=start_date, end_date=end_date)
 
 
-        return render_template("recalculate_result.html")
+	db.execute("""
+
+		WITH has_strength_now AS (
+			SELECT team_id, group_id, strength_rating IS NOT NULL as has_strength_rating FROM team_group_strength_ratings
+			JOIN application_settings ON batch_id = strength_rating_batch_id
+		), ranking_point_averages AS (
+		        SELECT team_id, group_id,
+                	        SUM(1.0 * team_game_group_ranking_points) / COUNT(*) as ranking_point_average, COUNT(*) num_games FROM
+                        	(
+                                	SELECT teams.id as team_id, groups.name as group_name, group_id, games.id,
+	                                CASE WHEN games.team1_id = teams.id
+        	                        THEN game_ranking_points.team1_ranking_points
+                	                ELSE game_ranking_points.team2_ranking_points END team_game_group_ranking_points,
+                        	        divisions.name division_name, divisions.id division_id, leagues.name league_name, leagues.id
+                                	FROM teams
+                                	JOIN (SELECT * FROM games WHERE game_date >= :start_date AND game_date <= :end_date) games
+                                        	ON games.team1_id = teams.id OR games.team2_id = teams.id
+	                                JOIN game_ranking_points ON game_ranking_points.game_id = games.id
+        	                        JOIN divisions ON divisions.id = teams.division_id
+                	                JOIN leagues ON leagues.id = teams.league_id
+                        	        JOIN groups ON groups.id = group_id
+	                        )
+        	                GROUP BY team_id, group_id
+
+
+		)
+		INSERT INTO team_group_rankings (batch_id, team_id, group_id, ranking_point_average)
+		SELECT :batch_id, rpa.team_id, rpa.group_id, 
+		CASE WHEN num_games >= 3 OR (has_strength_rating AND num_games >= 2) THEN -- eligible 
+		ranking_point_average * 1.0 ELSE
+		NULL END as ranking_point_average
+		FROM ranking_point_averages rpa
+		JOIN teams ON teams.id = rpa.team_id
+        JOIN has_strength_now ON has_strength_now.team_id = teams.id AND has_strength_now.group_id = rpa.group_id
+
+	""", batch_id=batch_id, start_date=rankings_start_date, end_date=rankings_end_date)
+
+        result = db.execute("""
+           UPDATE application_settings SET strength_rating_batch_id = :batch_id
+        """, batch_id=batch_id)
+
+        return redirect("/sr_batches")
     else:
         return render_template("recalculate.html")
 
@@ -877,31 +988,34 @@ def rankings():
     for row in groups_result:
         group_names[str(row["id"])] = row["name"]
 
-    start_date_raw = request.args.get("start_date")
-    end_date_raw = request.args.get("end_date")
+    batches_result = db.execute("SELECT id, name FROM strength_rating_batches")
+    batch_names = {}
+    for row in batches_result:
+        batch_names[str(row["id"])] = row["name"]
 
     group_id_raw = request.args.get("group_id")
-
-    print start_date_raw, end_date_raw, group_id_raw
-
-    if not start_date_raw or not end_date_raw or not group_id_raw:
-      today = datetime.date.today()
-      first = today.replace(day=1)
-      end_date = first - datetime.timedelta(days=1)
-      start_date = end_date - relativedelta.relativedelta(months=8)# TODO subtract time off this
-      group_id = 1
-      print "DEFAULTS", start_date, end_date, group_id
-    else:
-      start_datetime = datetime.datetime.strptime(start_date_raw, "%Y-%m-%d")
-      end_datetime = datetime.datetime.strptime(end_date_raw, "%Y-%m-%d")
-      start_date = datetime.date(start_datetime.year, start_datetime.month, start_datetime.day)
-      end_date = datetime.date(end_datetime.year, end_datetime.month, end_datetime.day)
+    if group_id_raw:
       group_id = int(group_id_raw)
-      print "PARSED", start_date, end_date, group_id
+    else:
+      group_id = 1
 
-    division_group_rankings = calculate_group_ranking_point_averages(start_date, end_date, group_id=group_id)
+    batch_id_raw = request.args.get("batch_id")
+    if batch_id_raw:
+      batch_id = int(batch_id_raw)
+    else:
+      current_batch_result = db.execute("""
+        SELECT strength_rating_batch_id FROM application_settings LIMIT 1
+      """)
+
+      if len(current_batch_result) != 1:
+        # TODO: handle error
+        pass
+
+      batch_id = int(current_batch_result[0]["strength_rating_batch_id"])
+
+    division_group_rankings = fetch_batch_rankings(batch_id, group_id)
     print division_group_rankings, "DIVISION GROUP RANKINGS"
-    return render_template("rankings.html", group_names=group_names, division_group_rankings=division_group_rankings, start_date=start_date, end_date=end_date, grp_id=str(group_id))
+    return render_template("rankings.html", group_names=group_names, division_group_rankings=division_group_rankings, grp_id=str(group_id), batch_id=str(batch_id), batch_names=batch_names)
 
 def errorhandler(e):
     """Handle error"""

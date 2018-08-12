@@ -57,6 +57,14 @@ CREATE TABLE team_group_strength_ratings (
     strength_rating DECIMAL
 );
 
+CREATE TABLE team_group_rankings (
+	id INTEGER PRIMARY KEY,
+	batch_id INTEGER,
+	team_id INTEGER,
+	group_id DECIMAL,
+        ranking_point_average DECIMAL
+);
+
 CREATE TABLE games (
 	id INTEGER PRIMARY KEY,
         entered_date DATE DEFAULT CURRENT_DATE,

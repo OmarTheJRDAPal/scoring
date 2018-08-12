@@ -5,8 +5,8 @@
 {% endblock %}
 
 {% block main %}
-    <h1>Rankings</h1>
-    <form action="/rankings" method="get">
+    <h1>Strengths</h1>
+    <form action="/strengths" method="get">
         <div class="form-group">
 		    <label for="group_select">Group</label>
 		  	<select id="group_select" name="group_id">
@@ -25,15 +25,14 @@
 
         </div>
     </form>
-    {% for division_name in division_group_rankings %}
+    {% for division_name in division_group_strengths %}
 	<div style="display: inline-block">
 	<h2>{{ division_name }}</h2>
 	<table class="table table-striped">
-	{% for team in division_group_rankings[division_name] %}
+	{% for team in division_group_strengths[division_name] %}
 		<tr>
-			<td>{{ loop.index }}</td>
 			<td>{{ team["name"]}} ({{team["league"]}})</td>
-			<td>{{ team["rp_average"]}}</td>
+			<td>{{ team["strength_rating"]}}</td>
 		</tr>			
 	{% endfor %}
 	</table>

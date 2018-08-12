@@ -26,10 +26,11 @@
       <td>{% if current_batch == batch["id"] %}
 	This is the selected batch
       {% else %}
-	<a href="/switch_to_batch?id={{batch["id"]}}"<button>Switch to this batch</button></a>
+	<a href="/switch_to_batch?id={{batch["id"]}}"><button>Switch to this batch</button></a>
       </td>
       {% endif %}
-      <td><a href="/sr_batch?id={{batch["id"]}}"><button>More detail</button></a></td>
+      <td><a href="/rankings?batch_id={{batch["id"]}}"><button>rankings</button></a><br/>
+      <a href="/rankings?batch_id={{batch["id"]}}"><button>strengths</button></a></td>
     </tr>
    {% endfor %}
  </table>
