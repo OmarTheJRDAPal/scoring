@@ -138,9 +138,6 @@ def register():
     rows = db.execute("SELECT * FROM users WHERE id = :user_id",
                       user_id=this_user_id)
 
-    hash_value = str(generate_password_hash("jrda"))
-    print "HASHVALUE", hash_value
-
     if len(rows) != 1:
       return apology("internal server error", 500)
 
@@ -162,6 +159,8 @@ def register():
     if request.form.get("admin"):
       admin = 1
 
+    hash_value = str(generate_password_hash(password))
+
     # Query database for username
     rows = db.execute("SELECT * FROM users WHERE username = :username",
                       username=username)
@@ -174,7 +173,7 @@ def register():
       result = db.execute("INSERT INTO users (username, hash, admin) VALUES (:username, :hash, :admin)", username=username, hash=hash_value, admin=admin)
       flash("Successfully created user %s" % (username), "success")
 
-    return redirect("/add")
+    return redirect("/users")
 
 
 
@@ -370,7 +369,7 @@ def add_group():
       flash("Could not create group", "danger")
     else:
       flash("Successfully created group with id " + str(group_id), "success")
-    return redirect("/add")
+    return redirect("/groups")
 
 @app.route("/add_team", methods=["POST"])
 @login_required
@@ -564,6 +563,25 @@ def add():
       leagues_result = db.execute("""
           SELECT id, name FROM leagues
       """)
+
+      teams_result = db.execute("""
+          SELECT id, teams.name as name, leagues.name as league_name, divisions.name as division_name FROM teams
+	  JOIN divisions ON divisions.id = teams.division_id
+	  JOIN leagues ON leagues.id = teams.league_id
+      """)
+
+      teams_by_league = defaultdict(lambda: defaultdict(lambda: []))
+
+      for team in teams_result:
+        teams_by_league[team["league_name"]][team["division_name"]].append({
+          "name": team["name"],
+          "division": team["division_name"],
+          "id": team["id"],
+        })
+
+      print teams_by_league
+
+
       return render_template("add.html", divisions=divisions_result, leagues=leagues_result)
 
 
