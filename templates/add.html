@@ -34,4 +34,15 @@
   </form>
   <hr/>
   <h2>Teams By League</h2>
+    {% for league in teams_by_league %}
+         <h3>{{league}}</h3>
+         {% for division in teams_by_league[league] %}
+            <h4 class="text-left">{{division}}</h4>
+            <ul class="text-left list-group">
+              {% for team in teams_by_league[league][division] %}
+		<a href="/team?id={{team["id"]}}"<li class="list-group-item">{{team["name"]}}</li></a>
+              {% endfor %}
+            </ul>
+         {% endfor %}
+    {% endfor %}
 {% endblock %}

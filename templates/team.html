@@ -5,8 +5,8 @@
 {% endblock %}
 
 {% block main %}
-    <h1>{{team["league"]}}</h1>
-    <h2>Division: {{team["division"]}}</h2>
+    <h1>{{team["name"]}}</h1>
+    <h2>League: {{team["league"]}}, Division: {{team["division"]}}</h2>
     <div class="container-fluid">
     <div class="row-fluid">
     <div class="span6">
@@ -37,8 +37,8 @@
   		{% for game in team["games"] %}
     		<tr>
     			<td>{{game["game_date"]}}</td>
-			<td>{{game["l1_name"]}}</td>
-			<td>{{game["l2_name"]}}</td>
+			<td>{{game["t1_name"]}}</td>
+			<td>{{game["t2_name"]}}</td>
 			<td><a href="/game?id={{game["game_id"]}}"><button>More</button></a></td>
     		</tr>
   		{% endfor %}

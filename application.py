@@ -404,7 +404,7 @@ def team():
     team_id = int(request.args.get("id"))
 
     teams_result = db.execute("""
-	SELECT leagues.name league, divisions.name as division FROM teams 
+	SELECT leagues.name league, divisions.name as division, teams.name as name FROM teams 
         JOIN leagues ON leagues.id = teams.league_id
         JOIN divisions ON divisions.id = teams.division_id
         WHERE teams.id = :team_id
@@ -415,9 +415,8 @@ def team():
 
     team = teams_result[0]
 
-
     team_strength_ratings_result = db.execute("""
-        SELECT * FROM groups
+        SELECT groups.name, tgsr.strength_rating FROM groups
         JOIN (SELECT * FROM application_settings LIMIT 1) application_settings ON 1
         JOIN teams ON teams.id = :team_id
         JOIN group_memberships ON group_memberships.league_id = teams.league_id AND group_memberships.group_id = groups.id
@@ -428,7 +427,7 @@ def team():
     print team_strength_ratings_result
 
     games_result = db.execute("""
-        SELECT *, l1.name as l1_name, l2.name as l2_name FROM games 
+        SELECT *, t1.name as t1_name, t2.name as t2_name FROM games 
         JOIN game_ranking_points ON game_id = games.id
 	JOIN game_types ON game_types.id = game_type_id
 	JOIN teams t1 ON t1.id = games.team1_id
@@ -436,6 +435,7 @@ def team():
 	JOIN leagues l1 ON l1.id = t1.league_id
 	JOIN leagues l2 ON l2.id = t2.league_id
         WHERE team1_id = :team_id OR team2_id = :team_id
+        GROUP BY games.id
 	ORDER BY game_date DESC
     """, team_id=team_id)
 
@@ -453,7 +453,8 @@ def game():
 
     games_result = db.execute("""
         SELECT games.id as game_id, game_date, game_type, divisions.name as division, leagues.name as team1_league,
-        leagues2.name as team2_league, team1_points, team2_points, team1_expulsions, team2_expulsions, username, entered_date
+        leagues2.name as team2_league, team1_points, team2_points, team1_expulsions, team2_expulsions, username, entered_date,
+        team_1_data.name as team1_name, team_2_data.name as team2_name, team1_id, team2_id
          FROM games
         JOIN game_types ON game_type_id = game_types.id
         JOIN teams team_1_data ON team_1_data.id = team1_id
@@ -565,7 +566,7 @@ def add():
       """)
 
       teams_result = db.execute("""
-          SELECT id, teams.name as name, leagues.name as league_name, divisions.name as division_name FROM teams
+          SELECT teams.id, teams.name as name, leagues.name as league_name, divisions.name as division_name FROM teams
 	  JOIN divisions ON divisions.id = teams.division_id
 	  JOIN leagues ON leagues.id = teams.league_id
       """)
@@ -579,10 +580,7 @@ def add():
           "id": team["id"],
         })
 
-      print teams_by_league
-
-
-      return render_template("add.html", divisions=divisions_result, leagues=leagues_result)
+      return render_template("add.html", divisions=divisions_result, leagues=leagues_result, teams_by_league=teams_by_league)
 
 
 
@@ -899,6 +897,8 @@ def recalculate():
 
         rankings_start_date = datetime.datetime.strptime(rankings_start_date_raw, "%Y-%m-%d")
         rankings_end_date = datetime.datetime.strptime(rankings_end_date_raw, "%Y-%m-%d")
+
+	print "start_date", start_date, "end_date", end_date, "ranking start date", rankings_start_date, "ranking end date", rankings_end_date
 
 	computed_on = datetime.datetime.now()
 
